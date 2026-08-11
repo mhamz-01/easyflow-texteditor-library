@@ -195,7 +195,37 @@ const MobileToolbarContent = ({
   </>
 );
 
-export function SimpleEditor() {
+export interface SimpleEditorProps {
+  /**
+   * Whether the document content can be edited.
+   * @default true
+   */
+  editable?: boolean;
+}
+
+// Keys allowed through to the editor's DOM node while `editable` is false,
+// so read-only users can still scroll/select/copy content.
+const READ_ONLY_ALLOWED_KEYS = new Set([
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "Home",
+  "End",
+  "PageUp",
+  "PageDown",
+  "Tab",
+  "Escape",
+]);
+
+function isReadOnlyAllowedKeydown(event: KeyboardEvent) {
+  if (READ_ONLY_ALLOWED_KEYS.has(event.key)) return true
+  const isModifierCombo = event.ctrlKey || event.metaKey
+  if (isModifierCombo && ["c", "a"].includes(event.key.toLowerCase())) return true
+  return false
+}
+
+export function SimpleEditor({ editable = true }: SimpleEditorProps) {
   const { setEditorContent, debouncedSave} = useEditorBridge();
   const isMobile = useIsBreakpoint();
   const { height } = useWindowSize();
@@ -204,9 +234,14 @@ export function SimpleEditor() {
   );
   const toolbarRef = useRef<HTMLDivElement>(null);
 
+  // Read inside handlers that Tiptap doesn't re-create on every render, so the
+  // latest value is always seen even if the closure captured an older one.
+  const editableRef = useRef(editable);
+  editableRef.current = editable;
 
   const editor = useEditor({
     immediatelyRender: false,
+    editable,
     editorProps: {
       attributes: {
         autocomplete: "off",
@@ -214,6 +249,13 @@ export function SimpleEditor() {
         autocapitalize: "off",
         "aria-label": "Main content area, start typing to enter text.",
         class: "simple-editor",
+      },
+      // Belt-and-suspenders: `editable: false` only flips `contenteditable`,
+      // it does not stop keymap-bound commands (bold, undo, etc.) from
+      // running, so block those explicitly while read-only.
+      handleKeyDown: (_view, event) => {
+        if (editableRef.current) return false
+        return !isReadOnlyAllowedKeydown(event)
       },
     },
     extensions: [
@@ -264,6 +306,9 @@ export function SimpleEditor() {
       setEditorContent(editor);
     },
     onUpdate: ({ editor }) => {
+      // Guard against onChange firing from any residual programmatic
+      // mutation while the editor is read-only.
+      if (!editableRef.current) return;
       console.log("✏️ Editor updated - triggering debounced save");
       debouncedSave(editor);
     },
@@ -276,6 +321,14 @@ export function SimpleEditor() {
       setEditorContent(editor);
     }
   }, [editor, setEditorContent]);
+
+  // `useEditor`'s `editable` option only applies at creation time, so
+  // toggling the prop on a mounted editor needs an explicit setEditable call.
+  useEffect(() => {
+    if (editor && editor.isEditable !== editable) {
+      editor.setEditable(editable);
+    }
+  }, [editor, editable]);
 
 
   
@@ -325,29 +378,35 @@ export function SimpleEditor() {
   return (
     <div className="simple-editor-wrapper">
       <EditorContext.Provider value={{ editor }}>
-        <Toolbar
-          ref={toolbarRef}
-          style={{
-            ...(isMobile
-              ? {
-                  bottom: `calc(100% - ${height - rect.y}px)`,
-                }
-              : {}),
-          }}
+        <fieldset
+          disabled={!editable}
+          className="tiptap-toolbar-fieldset"
+          aria-hidden={!editable}
         >
-          {mobileView === "main" ? (
-            <MainToolbarContent
-              onHighlighterClick={() => setMobileView("highlighter")}
-              onLinkClick={() => setMobileView("link")}
-              isMobile={isMobile}
-            />
-          ) : (
-            <MobileToolbarContent
-              type={mobileView === "highlighter" ? "highlighter" : "link"}
-              onBack={() => setMobileView("main")}
-            />
-          )}
-        </Toolbar>
+          <Toolbar
+            ref={toolbarRef}
+            style={{
+              ...(isMobile
+                ? {
+                    bottom: `calc(100% - ${height - rect.y}px)`,
+                  }
+                : {}),
+            }}
+          >
+            {mobileView === "main" ? (
+              <MainToolbarContent
+                onHighlighterClick={() => setMobileView("highlighter")}
+                onLinkClick={() => setMobileView("link")}
+                isMobile={isMobile}
+              />
+            ) : (
+              <MobileToolbarContent
+                type={mobileView === "highlighter" ? "highlighter" : "link"}
+                onBack={() => setMobileView("main")}
+              />
+            )}
+          </Toolbar>
+        </fieldset>
 
         <EditorContent
           editor={editor}

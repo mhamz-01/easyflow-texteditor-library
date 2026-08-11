@@ -38,6 +38,12 @@ interface EditorSidebarProps {
   onDelete: (id: string) => void;
   onRenameSubTab: (tabId: string, subTabId: string, title: string) => void;
   onDeleteSubTab: (tabId: string, subTabId: string) => void;
+  /**
+   * When true, tab/subtab mutations (add, rename, delete) are disabled.
+   * Selecting an existing tab or subtab is never disabled.
+   * @default false
+   */
+  disableTabActions?: boolean;
 }
 
 // ✨ Animation variants
@@ -97,6 +103,7 @@ export function AppSidebar({
   onDelete,
   onRenameSubTab,
   onDeleteSubTab,
+  disableTabActions = false,
 }: EditorSidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingSubId, setEditingSubId] = useState<string | null>(null);
@@ -143,8 +150,9 @@ export function AppSidebar({
           <SidebarGroupLabel className="flex items-center justify-between">
             Documents
             <button
-              onClick={onAddTab}
-              className="rounded p-1 transition-all duration-200 hover:bg-accent hover:scale-110"
+              onClick={disableTabActions ? undefined : onAddTab}
+              disabled={disableTabActions}
+              className="rounded p-1 transition-all duration-200 hover:bg-accent hover:scale-110 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
               aria-label="Add new document"
             >
               <Plus size={16} />
@@ -228,8 +236,10 @@ export function AppSidebar({
                             <button
                               className="w-full truncate text-left text-sm transition-colors duration-200"
                               onClick={() => onSelect(tab.id)}
-                              onDoubleClick={() =>
-                                startRenameTab(tab.id, tab.title)
+                              onDoubleClick={
+                                disableTabActions
+                                  ? undefined
+                                  : () => startRenameTab(tab.id, tab.title)
                               }
                             >
                               {tab.title}
@@ -238,43 +248,45 @@ export function AppSidebar({
                         </div>
 
                         {/* TAB MENU */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              className="opacity-0 group-hover:opacity-100 rounded p-1 transition-all duration-200 hover:bg-accent/80"
-                              aria-label="Tab options"
-                            >
-                              <MoreHorizontal size={14} />
-                            </button>
-                          </DropdownMenuTrigger>
-
-                          <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                onAddSubTab(tab.id);
-                                setOpenTabs((prev) => ({
-                                  ...prev,
-                                  [tab.id]: true,
-                                }));
-                              }}
-                              className="cursor-pointer transition-colors duration-150"
-                            >
-                              Add subtab
-                            </DropdownMenuItem>
-
-                            {canDeleteTab && (
-                              <DropdownMenuItem
-                                className="text-red-500 cursor-pointer transition-colors duration-150 focus:text-red-600"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onDelete(tab.id);
-                                }}
+                        {!disableTabActions && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                className="opacity-0 group-hover:opacity-100 rounded p-1 transition-all duration-200 hover:bg-accent/80"
+                                aria-label="Tab options"
                               >
-                                Delete
+                                <MoreHorizontal size={14} />
+                              </button>
+                            </DropdownMenuTrigger>
+
+                            <DropdownMenuContent align="end" className="w-40">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  onAddSubTab(tab.id);
+                                  setOpenTabs((prev) => ({
+                                    ...prev,
+                                    [tab.id]: true,
+                                  }));
+                                }}
+                                className="cursor-pointer transition-colors duration-150"
+                              >
+                                Add subtab
                               </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+
+                              {canDeleteTab && (
+                                <DropdownMenuItem
+                                  className="text-red-500 cursor-pointer transition-colors duration-150 focus:text-red-600"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDelete(tab.id);
+                                  }}
+                                >
+                                  Delete
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
 
                       {/* ---------- SUBTABS ---------- */}
@@ -346,8 +358,11 @@ export function AppSidebar({
                                           <button
                                             className="w-full truncate text-left transition-colors duration-200"
                                             onClick={() => onSelect(tab.id, st.id)}
-                                            onDoubleClick={() =>
-                                              startRenameSubTab(st.id, st.title)
+                                            onDoubleClick={
+                                              disableTabActions
+                                                ? undefined
+                                                : () =>
+                                                    startRenameSubTab(st.id, st.title)
                                             }
                                           >
                                             {st.title}
@@ -356,7 +371,7 @@ export function AppSidebar({
                                       </div>
 
                                       {/* SUBTAB MENU */}
-                                      {onDeleteSubTab && (
+                                      {onDeleteSubTab && !disableTabActions && (
                                         <DropdownMenu>
                                           <DropdownMenuTrigger asChild>
                                             <button

@@ -752,7 +752,8 @@ function AppSidebar({
   onRename,
   onDelete,
   onRenameSubTab,
-  onDeleteSubTab
+  onDeleteSubTab,
+  disableTabActions = false
 }) {
   const [editingId, setEditingId] = (0, import_react3.useState)(null);
   const [editingSubId, setEditingSubId] = (0, import_react3.useState)(null);
@@ -790,8 +791,9 @@ function AppSidebar({
       /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         "button",
         {
-          onClick: onAddTab,
-          className: "rounded p-1 transition-all duration-200 hover:bg-accent hover:scale-110",
+          onClick: disableTabActions ? void 0 : onAddTab,
+          disabled: disableTabActions,
+          className: "rounded p-1 transition-all duration-200 hover:bg-accent hover:scale-110 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100",
           "aria-label": "Add new document",
           children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_lucide_react4.Plus, { size: 16 })
         }
@@ -862,11 +864,11 @@ function AppSidebar({
                     {
                       className: "w-full truncate text-left text-sm transition-colors duration-200",
                       onClick: () => onSelect(tab.id),
-                      onDoubleClick: () => startRenameTab(tab.id, tab.title),
+                      onDoubleClick: disableTabActions ? void 0 : () => startRenameTab(tab.id, tab.title),
                       children: tab.title
                     }
                   ) }),
-                  /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(DropdownMenu, { children: [
+                  !disableTabActions && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(DropdownMenu, { children: [
                     /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(DropdownMenuTrigger, { asChild: true, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                       "button",
                       {
@@ -956,11 +958,11 @@ function AppSidebar({
                           {
                             className: "w-full truncate text-left transition-colors duration-200",
                             onClick: () => onSelect(tab.id, st.id),
-                            onDoubleClick: () => startRenameSubTab(st.id, st.title),
+                            onDoubleClick: disableTabActions ? void 0 : () => startRenameSubTab(st.id, st.title),
                             children: st.title
                           }
                         ) }),
-                        onDeleteSubTab && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(DropdownMenu, { children: [
+                        onDeleteSubTab && !disableTabActions && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(DropdownMenu, { children: [
                           /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(DropdownMenuTrigger, { asChild: true, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                             "button",
                             {
@@ -1022,7 +1024,15 @@ function useEditorBridge() {
 
 // src/components/editorLayout/editorLayout.tsx
 var import_jsx_runtime12 = require("react/jsx-runtime");
-function EditorLayout({ children, onChange, initialTabs, onTabsChange }) {
+function EditorLayout({
+  children,
+  onChange,
+  initialTabs,
+  onTabsChange,
+  editable = true,
+  restrictTabActions = false
+}) {
+  const disableTabActions = restrictTabActions && !editable;
   const hasInitialized = (0, import_react5.useRef)(false);
   const [editor, setEditor] = (0, import_react5.useState)(null);
   const [tabs, setTabs] = (0, import_react5.useState)([]);
@@ -1322,7 +1332,8 @@ function EditorLayout({ children, onChange, initialTabs, onTabsChange }) {
             onRename: renameTab,
             onDelete: deleteTab,
             onRenameSubTab: renameSubTab,
-            onDeleteSubTab: deleteSubTab
+            onDeleteSubTab: deleteSubTab,
+            disableTabActions
           }
         ),
         /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(SidebarInset, { className: "flex flex-col flex-1 min-h-0 overflow-hidden", children: [
@@ -2646,6 +2657,7 @@ var FileCornerIcon = () => /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(
 );
 var ImageUploadDragArea = ({
   onFile,
+  disabled = false,
   children
 }) => {
   const [isDragOver, setIsDragOver] = (0, import_react15.useState)(false);
@@ -2653,6 +2665,7 @@ var ImageUploadDragArea = ({
   const handleDragEnter = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (disabled) return;
     setIsDragActive(true);
   };
   const handleDragLeave = (e) => {
@@ -2666,6 +2679,7 @@ var ImageUploadDragArea = ({
   const handleDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (disabled) return;
     setIsDragOver(true);
   };
   const handleDrop = (e) => {
@@ -2673,6 +2687,7 @@ var ImageUploadDragArea = ({
     e.stopPropagation();
     setIsDragActive(false);
     setIsDragOver(false);
+    if (disabled) return;
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
       onFile(files);
@@ -2767,6 +2782,7 @@ var ImageUploadNode = (props) => {
   const { accept, limit, maxSize } = props.node.attrs;
   const inputRef = (0, import_react15.useRef)(null);
   const extension = props.extension;
+  const isEditable = props.editor.isEditable;
   const uploadOptions = {
     maxSize,
     limit,
@@ -2799,6 +2815,7 @@ var ImageUploadNode = (props) => {
     }
   };
   const handleChange = (e) => {
+    if (!isEditable) return;
     const files = e.target.files;
     if (!files || files.length === 0) {
       extension.options.onError?.(new Error("No file selected"));
@@ -2807,6 +2824,7 @@ var ImageUploadNode = (props) => {
     handleUpload(Array.from(files));
   };
   const handleClick = () => {
+    if (!isEditable) return;
     if (inputRef.current && fileItems.length === 0) {
       inputRef.current.value = "";
       inputRef.current.click();
@@ -2820,7 +2838,7 @@ var ImageUploadNode = (props) => {
       tabIndex: 0,
       onClick: handleClick,
       children: [
-        !hasFiles && /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(ImageUploadDragArea, { onFile: handleUpload, children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(DropZoneContent, { maxSize, limit }) }),
+        !hasFiles && /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(ImageUploadDragArea, { onFile: handleUpload, disabled: !isEditable, children: /* @__PURE__ */ (0, import_jsx_runtime20.jsx)(DropZoneContent, { maxSize, limit }) }),
         hasFiles && /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)("div", { className: "tiptap-image-upload-previews", children: [
           fileItems.length > 1 && /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)("div", { className: "tiptap-image-upload-header", children: [
             /* @__PURE__ */ (0, import_jsx_runtime20.jsxs)("span", { children: [
@@ -2858,6 +2876,7 @@ var ImageUploadNode = (props) => {
             accept,
             type: "file",
             multiple: limit > 1,
+            disabled: !isEditable,
             onChange: handleChange,
             onClick: (e) => e.stopPropagation()
           }
@@ -7672,7 +7691,25 @@ var MobileToolbarContent = ({
   /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(ToolbarSeparator, {}),
   type === "highlighter" ? /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(ColorHighlightPopoverContent, {}) : /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(LinkContent, {})
 ] });
-function SimpleEditor() {
+var READ_ONLY_ALLOWED_KEYS = /* @__PURE__ */ new Set([
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "Home",
+  "End",
+  "PageUp",
+  "PageDown",
+  "Tab",
+  "Escape"
+]);
+function isReadOnlyAllowedKeydown(event) {
+  if (READ_ONLY_ALLOWED_KEYS.has(event.key)) return true;
+  const isModifierCombo = event.ctrlKey || event.metaKey;
+  if (isModifierCombo && ["c", "a"].includes(event.key.toLowerCase())) return true;
+  return false;
+}
+function SimpleEditor({ editable = true }) {
   const { setEditorContent, debouncedSave } = useEditorBridge();
   const isMobile = useIsBreakpoint();
   const { height } = useWindowSize();
@@ -7680,8 +7717,11 @@ function SimpleEditor() {
     "main"
   );
   const toolbarRef = (0, import_react94.useRef)(null);
+  const editableRef = (0, import_react94.useRef)(editable);
+  editableRef.current = editable;
   const editor = (0, import_react95.useEditor)({
     immediatelyRender: false,
+    editable,
     editorProps: {
       attributes: {
         autocomplete: "off",
@@ -7689,6 +7729,13 @@ function SimpleEditor() {
         autocapitalize: "off",
         "aria-label": "Main content area, start typing to enter text.",
         class: "simple-editor"
+      },
+      // Belt-and-suspenders: `editable: false` only flips `contenteditable`,
+      // it does not stop keymap-bound commands (bold, undo, etc.) from
+      // running, so block those explicitly while read-only.
+      handleKeyDown: (_view, event) => {
+        if (editableRef.current) return false;
+        return !isReadOnlyAllowedKeydown(event);
       }
     },
     extensions: [
@@ -7739,6 +7786,7 @@ function SimpleEditor() {
       setEditorContent(editor2);
     },
     onUpdate: ({ editor: editor2 }) => {
+      if (!editableRef.current) return;
       console.log("\u270F\uFE0F Editor updated - triggering debounced save");
       debouncedSave(editor2);
     }
@@ -7749,6 +7797,11 @@ function SimpleEditor() {
       setEditorContent(editor);
     }
   }, [editor, setEditorContent]);
+  (0, import_react94.useEffect)(() => {
+    if (editor && editor.isEditable !== editable) {
+      editor.setEditable(editable);
+    }
+  }, [editor, editable]);
   const rect = useCursorVisibility({
     editor,
     overlayHeight: toolbarRef.current?.getBoundingClientRect().height ?? 0
@@ -7782,26 +7835,34 @@ function SimpleEditor() {
   }, []);
   return /* @__PURE__ */ (0, import_jsx_runtime77.jsx)("div", { className: "simple-editor-wrapper", children: /* @__PURE__ */ (0, import_jsx_runtime77.jsxs)(import_react95.EditorContext.Provider, { value: { editor }, children: [
     /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(
-      Toolbar,
+      "fieldset",
       {
-        ref: toolbarRef,
-        style: {
-          ...isMobile ? {
-            bottom: `calc(100% - ${height - rect.y}px)`
-          } : {}
-        },
-        children: mobileView === "main" ? /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(
-          MainToolbarContent,
+        disabled: !editable,
+        className: "tiptap-toolbar-fieldset",
+        "aria-hidden": !editable,
+        children: /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(
+          Toolbar,
           {
-            onHighlighterClick: () => setMobileView("highlighter"),
-            onLinkClick: () => setMobileView("link"),
-            isMobile
-          }
-        ) : /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(
-          MobileToolbarContent,
-          {
-            type: mobileView === "highlighter" ? "highlighter" : "link",
-            onBack: () => setMobileView("main")
+            ref: toolbarRef,
+            style: {
+              ...isMobile ? {
+                bottom: `calc(100% - ${height - rect.y}px)`
+              } : {}
+            },
+            children: mobileView === "main" ? /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(
+              MainToolbarContent,
+              {
+                onHighlighterClick: () => setMobileView("highlighter"),
+                onLinkClick: () => setMobileView("link"),
+                isMobile
+              }
+            ) : /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(
+              MobileToolbarContent,
+              {
+                type: mobileView === "highlighter" ? "highlighter" : "link",
+                onBack: () => setMobileView("main")
+              }
+            )
           }
         )
       }
@@ -7821,8 +7882,18 @@ function SimpleEditor() {
 
 // src/components/editor/editor.tsx
 var import_jsx_runtime78 = require("react/jsx-runtime");
-function Editor({ onChange, className, style, initialTabs, onTabsChange }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime78.jsx)("div", { className, style, children: /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(EditorShell, { children: /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(EditorLayout, { onChange, initialTabs, onTabsChange, children: /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(SimpleEditor, {}) }) }) });
+function Editor({ onChange, className, style, initialTabs, onTabsChange, editable, restrictTabActions }) {
+  return /* @__PURE__ */ (0, import_jsx_runtime78.jsx)("div", { className, style, children: /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(EditorShell, { children: /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
+    EditorLayout,
+    {
+      onChange,
+      initialTabs,
+      onTabsChange,
+      editable,
+      restrictTabActions,
+      children: /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(SimpleEditor, { editable })
+    }
+  ) }) });
 }
 
 // src/hooks/use-scrolling.ts

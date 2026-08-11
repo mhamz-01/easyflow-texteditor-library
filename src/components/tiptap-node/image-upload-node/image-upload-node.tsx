@@ -273,6 +273,11 @@ interface ImageUploadDragAreaProps {
    */
   onFile: (files: File[]) => void
   /**
+   * Whether drag-and-drop uploads are allowed
+   * @default true
+   */
+  disabled?: boolean
+  /**
    * Optional child elements to render inside the drag area
    * @optional
    * @default undefined
@@ -285,6 +290,7 @@ interface ImageUploadDragAreaProps {
  */
 const ImageUploadDragArea: React.FC<ImageUploadDragAreaProps> = ({
   onFile,
+  disabled = false,
   children,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false)
@@ -293,6 +299,7 @@ const ImageUploadDragArea: React.FC<ImageUploadDragAreaProps> = ({
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    if (disabled) return
     setIsDragActive(true)
   }
 
@@ -308,6 +315,7 @@ const ImageUploadDragArea: React.FC<ImageUploadDragAreaProps> = ({
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    if (disabled) return
     setIsDragOver(true)
   }
 
@@ -316,6 +324,8 @@ const ImageUploadDragArea: React.FC<ImageUploadDragAreaProps> = ({
     e.stopPropagation()
     setIsDragActive(false)
     setIsDragOver(false)
+
+    if (disabled) return
 
     const files = Array.from(e.dataTransfer.files)
     if (files.length > 0) {
@@ -436,6 +446,7 @@ export const ImageUploadNode: React.FC<NodeViewProps> = (props) => {
   const { accept, limit, maxSize } = props.node.attrs
   const inputRef = useRef<HTMLInputElement>(null)
   const extension = props.extension
+  const isEditable = props.editor.isEditable
 
   const uploadOptions: UploadOptions = {
     maxSize,
@@ -483,6 +494,7 @@ export const ImageUploadNode: React.FC<NodeViewProps> = (props) => {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isEditable) return
     const files = e.target.files
     if (!files || files.length === 0) {
       extension.options.onError?.(new Error("No file selected"))
@@ -492,6 +504,7 @@ export const ImageUploadNode: React.FC<NodeViewProps> = (props) => {
   }
 
   const handleClick = () => {
+    if (!isEditable) return
     if (inputRef.current && fileItems.length === 0) {
       inputRef.current.value = ""
       inputRef.current.click()
@@ -507,7 +520,7 @@ export const ImageUploadNode: React.FC<NodeViewProps> = (props) => {
       onClick={handleClick}
     >
       {!hasFiles && (
-        <ImageUploadDragArea onFile={handleUpload}>
+        <ImageUploadDragArea onFile={handleUpload} disabled={!isEditable}>
           <DropZoneContent maxSize={maxSize} limit={limit} />
         </ImageUploadDragArea>
       )}
@@ -545,6 +558,7 @@ export const ImageUploadNode: React.FC<NodeViewProps> = (props) => {
         accept={accept}
         type="file"
         multiple={limit > 1}
+        disabled={!isEditable}
         onChange={handleChange}
         onClick={(e: React.MouseEvent<HTMLInputElement>) => e.stopPropagation()}
       />

@@ -24,9 +24,22 @@ interface EditorLayoutProps {
   initialTabs?:EditorTab[]
   onChange?: (payload: EditorChangePayload) => void
   onTabsChange?: (tabs: EditorTab[]) => void
+  editable?: boolean
+  restrictTabActions?: boolean
 }
 
-export function EditorLayout({ children, onChange, initialTabs, onTabsChange }: EditorLayoutProps) {
+export function EditorLayout({
+  children,
+  onChange,
+  initialTabs,
+  onTabsChange,
+  editable = true,
+  restrictTabActions = false,
+}: EditorLayoutProps) {
+  // Sidebar tab actions (add/rename/delete) are only locked when the consumer
+  // opts in via `restrictTabActions` AND the document is read-only. Tab
+  // switching itself is never locked.
+  const disableTabActions = restrictTabActions && !editable
   const hasInitialized = useRef(false)
   const [editor, setEditor] = useState<Editor | null>(null)
   const [tabs, setTabs] = useState<EditorTab[]>([])
@@ -445,6 +458,7 @@ useEffect(() => { activeSubTabIdRef.current = activeSubTabId }, [activeSubTabId]
             onDelete={deleteTab}
             onRenameSubTab={renameSubTab}
             onDeleteSubTab={deleteSubTab}
+            disableTabActions={disableTabActions}
           />
 
 <SidebarInset className="flex flex-col flex-1 min-h-0 overflow-hidden">

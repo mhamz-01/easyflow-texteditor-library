@@ -12,6 +12,17 @@
   }
 }
 
+.tiptap-toolbar-fieldset {
+  all: unset;
+  display: block;
+  width: 100%;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
 .tiptap-toolbar {
   display: flex;
   align-items: center;

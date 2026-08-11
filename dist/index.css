@@ -2,7 +2,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* C:/Users/hamza/AppData/Local/Temp/tmp-23880-YEQZ2vX6fLIY/easyflow-texteditor-v1/src/styles/index.css */
+/* C:/Users/hamza/AppData/Local/Temp/tmp-27588-7FCj65HnESZC/easyflow-texteditor-v1/src/styles/index.css */
 .tiptap.ProseMirror {
   --blockquote-bg-color: var(--tt-gray-light-900);
 }
@@ -1738,6 +1738,15 @@ table .column-resize-handle {
   --tt-toolbar-bg-color: var(--black);
   --tt-toolbar-border-color: var(--black);
 }
+.tiptap-toolbar-fieldset {
+  all: unset;
+  display: block;
+  width: 100%;
+}
+.tiptap-toolbar-fieldset:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .tiptap-toolbar {
   display: flex;
   align-items: center;
@@ -1875,7 +1884,7 @@ table .column-resize-handle {
   color: var(--tt-kbd);
 }
 
-/* C:/Users/hamza/AppData/Local/Temp/tmp-23880-YEQZ2vX6fLIY/easyflow-texteditor-v1/src/styles/_variables.css */
+/* C:/Users/hamza/AppData/Local/Temp/tmp-27588-7FCj65HnESZC/easyflow-texteditor-v1/src/styles/_variables.css */
 :root {
   overflow-wrap: break-word;
   text-size-adjust: none;
@@ -2107,7 +2116,7 @@ table .column-resize-handle {
   --tt-color-highlight-pink-contrast: rgba(220, 76, 145, 0.22);
 }
 
-/* C:/Users/hamza/AppData/Local/Temp/tmp-23880-YEQZ2vX6fLIY/easyflow-texteditor-v1/src/styles/_keyframe-animations.css */
+/* C:/Users/hamza/AppData/Local/Temp/tmp-27588-7FCj65HnESZC/easyflow-texteditor-v1/src/styles/_keyframe-animations.css */
 @keyframes fadeIn {
   from {
     opacity: 0;

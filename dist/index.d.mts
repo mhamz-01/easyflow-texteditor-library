@@ -44,8 +44,21 @@ interface EditorProps {
     onTabsChange?: (tabs: any[]) => void;
     className?: string;
     style?: React__default.CSSProperties;
+    /**
+     * Whether the document content can be edited.
+     * @default true
+     */
+    editable?: boolean;
+    /**
+     * Opt-in: also restrict the tab sidebar (add/rename/delete tab or subtab)
+     * whenever `editable` is `false`. Switching between existing tabs is never
+     * restricted. Defaults to `false` so existing consumers see no behavior
+     * change unless they explicitly opt in.
+     * @default false
+     */
+    restrictTabActions?: boolean;
 }
-declare function Editor({ onChange, className, style, initialTabs, onTabsChange }: EditorProps): react_jsx_runtime.JSX.Element;
+declare function Editor({ onChange, className, style, initialTabs, onTabsChange, editable, restrictTabActions }: EditorProps): react_jsx_runtime.JSX.Element;
 
 type UserRef<T> = ((instance: T | null) => void) | React.RefObject<T | null> | null | undefined;
 declare const useComposedRef: <T extends HTMLElement>(libRef: React.RefObject<T | null>, userRef: UserRef<T>) => (instance: T | null) => void;

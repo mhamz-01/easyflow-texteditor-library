@@ -99,7 +99,7 @@ export function shouldShowListDropdown(params: {
 }): boolean {
   const { editor, hideWhenUnavailable, listInSchema, canToggleAny } = params
 
-  if (!listInSchema || !editor) {
+  if (!listInSchema || !editor || !editor.isEditable) {
     return false
   }
 

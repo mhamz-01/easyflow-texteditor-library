@@ -24,7 +24,7 @@ export function FontFamilyDropdown() {
   const { editor } = useCurrentEditor();
   const [open, setOpen] = useState(false);
 
-  if (!editor) return null;
+  if (!editor || !editor.isEditable) return null;
 
   // Always enabled — current applied or typing font
   const currentFont =

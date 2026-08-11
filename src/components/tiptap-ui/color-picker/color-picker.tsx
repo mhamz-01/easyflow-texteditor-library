@@ -86,7 +86,7 @@ export function ColorPicker({ type = "text" }) {
     []
   );
 
-  if (!editor) return null;
+  if (!editor || !editor.isEditable) return null;
 
   return (
     <Popover open={open} onOpenChange={(v) => setOpen(v)}>

@@ -23,7 +23,7 @@ export function TableDropdownMenu() {
   const { editor } = useCurrentEditor()
   const [open, setOpen] = useState(false)
 
-  if (!editor) return null
+  if (!editor || !editor.isEditable) return null
 
   const handleAction = (action: string) => {
     switch (action) {

@@ -1353,7 +1353,6 @@ function EditorLayout({
     } else {
       editor.commands.clearContent();
     }
-    editor.view.dom.closest(".simple-editor-content")?.scrollTo({ top: 0 });
     lastRestoredRef.current = key;
     isRestoringRef.current = false;
   }, [editor, tabs, activeTabId, activeSubTabId]);
@@ -1366,7 +1365,7 @@ function EditorLayout({
     {
       style: { "--sidebar-width": "220px" },
       className: "h-full w-full overflow-hidden",
-      children: /* @__PURE__ */ jsxs6("div", { className: "flex h-full w-full min-h-0 overflow-hidden", children: [
+      children: /* @__PURE__ */ jsxs6("div", { className: "flex h-screen w-full min-h-0 overflow-hidden", children: [
         /* @__PURE__ */ jsx12(
           AppSidebar,
           {
@@ -7934,17 +7933,6 @@ function SimpleEditor({ editable = true }) {
         role: "presentation",
         autoFocus: true,
         className: "simple-editor-content",
-        onMouseDown: (event) => {
-          if (!editor || !editable || event.target !== event.currentTarget) return;
-          const rect2 = editor.view.dom.getBoundingClientRect();
-          const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
-          const hit = editor.view.posAtCoords({
-            left: clamp(event.clientX, rect2.left + 1, rect2.right - 1),
-            top: clamp(event.clientY, rect2.top + 1, rect2.bottom - 1)
-          });
-          event.preventDefault();
-          editor.chain().focus(hit?.pos ?? "end").run();
-        },
         children: editor && /* @__PURE__ */ jsx77(BubbleMenuInline, {})
       }
     )

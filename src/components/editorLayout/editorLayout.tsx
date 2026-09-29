@@ -429,10 +429,6 @@ useEffect(() => { activeSubTabIdRef.current = activeSubTabId }, [activeSubTabId]
       editor.commands.clearContent()
     }
 
-    // A newly opened document should start at the top, not inherit the
-    // previous document's scroll position.
-    editor.view.dom.closest(".simple-editor-content")?.scrollTo({ top: 0 })
-
     lastRestoredRef.current = key
     isRestoringRef.current = false
   }, [editor, tabs, activeTabId, activeSubTabId])
@@ -449,7 +445,7 @@ useEffect(() => { activeSubTabIdRef.current = activeSubTabId }, [activeSubTabId]
       style={{ "--sidebar-width": "220px" } as React.CSSProperties}
       className="h-full w-full overflow-hidden" // ← contain it
     >
-        <div className="flex h-full w-full min-h-0 overflow-hidden">
+        <div className="flex h-screen w-full min-h-0 overflow-hidden">
           <AppSidebar
             tabs={tabs}
             activeTabId={activeTabId}

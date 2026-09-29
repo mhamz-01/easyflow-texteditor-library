@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MoreHorizontal, Plus, FileText } from "lucide-react";
 import { motion, AnimatePresence, Variant } from "framer-motion"; // ✨ ADD THIS
 
@@ -69,6 +69,11 @@ const tabVariants : any = {
   }
 };
 
+// Row "..." menu trigger: shown on hover, keyboard focus, while its menu is
+// open, and always on touch devices (which have no hover).
+const MENU_TRIGGER_CLASS =
+  "shrink-0 rounded p-1 transition-all duration-200 hover:bg-accent/80 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 [@media(hover:none)]:opacity-100";
+
 const subtabVariants : any = {
   initial: { opacity: 0, x: -10, height: 0 },
   animate: { 
@@ -110,6 +115,15 @@ export function AppSidebar({
   const [tempTitle, setTempTitle] = useState("");
   const [openTabs, setOpenTabs] = useState<Record<string, boolean>>({});
 
+  // Keep the active subtab visible: expand its parent tab whenever a subtab
+  // becomes active (initial load, switching, or adding one).
+  useEffect(() => {
+    if (!activeSubTabId || !activeTabId) return;
+    setOpenTabs((prev) =>
+      prev[activeTabId] ? prev : { ...prev, [activeTabId]: true }
+    );
+  }, [activeTabId, activeSubTabId]);
+
   /* ---------- Rename helpers ---------- */
 
   const startRenameTab = (id: string, title: string) => {
@@ -134,6 +148,19 @@ export function AppSidebar({
     if (!editingSubId || !onRenameSubTab) return;
     onRenameSubTab(tabId, editingSubId, tempTitle.trim() || "Untitled");
     setEditingSubId(null);
+  };
+
+  // "Rename" from a row menu is deferred until the menu has fully closed;
+  // otherwise the menu's focus trap/return steals focus from the rename
+  // input and its onBlur commits the rename immediately.
+  const pendingRenameRef = useRef<(() => void) | null>(null);
+
+  const handleMenuCloseAutoFocus = (event: Event) => {
+    const startRename = pendingRenameRef.current;
+    if (!startRename) return;
+    pendingRenameRef.current = null;
+    event.preventDefault();
+    startRename();
   };
 
   const toggleTabOpen = (tabId: string) => {
@@ -235,6 +262,7 @@ export function AppSidebar({
                           ) : (
                             <button
                               className="w-full truncate text-left text-sm transition-colors duration-200"
+                              title={tab.title}
                               onClick={() => onSelect(tab.id)}
                               onDoubleClick={
                                 disableTabActions
@@ -252,14 +280,28 @@ export function AppSidebar({
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
-                                className="opacity-0 group-hover:opacity-100 rounded p-1 transition-all duration-200 hover:bg-accent/80"
-                                aria-label="Tab options"
+                                className={`${MENU_TRIGGER_CLASS} ${isActiveTab ? "opacity-100" : ""}`}
+                                aria-label={`Options for ${tab.title}`}
+                                title="More options"
                               >
                                 <MoreHorizontal size={14} />
                               </button>
                             </DropdownMenuTrigger>
 
-                            <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuContent
+                              align="end"
+                              className="w-40"
+                              onCloseAutoFocus={handleMenuCloseAutoFocus}
+                            >
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  pendingRenameRef.current = () =>
+                                    startRenameTab(tab.id, tab.title);
+                                }}
+                                className="cursor-pointer transition-colors duration-150"
+                              >
+                                Rename
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => {
                                   onAddSubTab(tab.id);
@@ -357,6 +399,7 @@ export function AppSidebar({
                                         ) : (
                                           <button
                                             className="w-full truncate text-left transition-colors duration-200"
+                                            title={st.title}
                                             onClick={() => onSelect(tab.id, st.id)}
                                             onDoubleClick={
                                               disableTabActions
@@ -375,8 +418,9 @@ export function AppSidebar({
                                         <DropdownMenu>
                                           <DropdownMenuTrigger asChild>
                                             <button
-                                              className="opacity-0 group-hover:opacity-100 rounded p-1 transition-all duration-200 hover:bg-accent/80"
-                                              aria-label="Subtab options"
+                                              className={`${MENU_TRIGGER_CLASS} ${isActiveSubTab ? "opacity-100" : ""}`}
+                                              aria-label={`Options for ${st.title}`}
+                                              title="More options"
                                             >
                                               <MoreHorizontal size={14} />
                                             </button>
@@ -385,7 +429,17 @@ export function AppSidebar({
                                           <DropdownMenuContent
                                             align="end"
                                             className="w-40"
+                                            onCloseAutoFocus={handleMenuCloseAutoFocus}
                                           >
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                pendingRenameRef.current = () =>
+                                                  startRenameSubTab(st.id, st.title);
+                                              }}
+                                              className="cursor-pointer transition-colors duration-150"
+                                            >
+                                              Rename
+                                            </DropdownMenuItem>
                                             <DropdownMenuItem
                                               className="text-red-500 cursor-pointer transition-colors duration-150 focus:text-red-600"
                                               onClick={() =>

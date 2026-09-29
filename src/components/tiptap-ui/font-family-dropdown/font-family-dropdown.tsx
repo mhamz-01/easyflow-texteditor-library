@@ -2,7 +2,7 @@
 
 import { useCurrentEditor } from "@tiptap/react";
 import { useState } from "react";
-import { FONT_OPTIONS } from "../../../lib/font";
+import { FONT_OPTIONS, findFontOption } from "../../../lib/font";
 import { ChevronDown } from "lucide-react";
 
 import { Button } from "../../../components/ui/button";
@@ -27,8 +27,10 @@ export function FontFamilyDropdown() {
   if (!editor || !editor.isEditable) return null;
 
   // Always enabled — current applied or typing font
-  const currentFont =
-    editor.getAttributes("textStyle").fontFamily || "Font Family";
+  const currentFamily: string | undefined =
+    editor.getAttributes("textStyle").fontFamily;
+  const currentOption = findFontOption(currentFamily);
+  const currentLabel = currentOption?.label ?? "Default";
 
   /**
    * APPLY FONT LOGIC:
@@ -60,14 +62,21 @@ export function FontFamilyDropdown() {
       <PopoverTrigger asChild>
         <Button
           variant="outlineFontFamily"
+          aria-label="Font family"
+          title={currentLabel}
           className="
-            min-w-[90px] h-7 px-2 flex items-center justify-between rounded-sm
+            w-[132px] h-7 px-2 flex items-center justify-between gap-1 rounded-sm
             border-[#a3a3a8] text-[#a3a3a8]
             hover:border-[#000] hover:text-[#fff] transition-colors
           "
         >
-          {currentFont}
-          <ChevronDown className="w-4 h-4" />
+          <span
+            className="truncate"
+            style={{ fontFamily: currentOption?.cssFontFamily }}
+          >
+            {currentLabel}
+          </span>
+          <ChevronDown className="w-4 h-4 shrink-0" />
         </Button>
       </PopoverTrigger>
 
@@ -117,11 +126,14 @@ export function FontFamilyDropdown() {
               {FONT_OPTIONS.map(({ label, cssFontFamily }) => (
                 <CommandItem
                   key={label}
+                  value={label}
                   onSelect={() => {
-                    applyFont(label);
+                    applyFont(cssFontFamily);
                     setOpen(false);
                   }}
-                  style={{ fontFamily: cssFontFamily}}
+                  data-checked={currentOption?.label === label}
+                  className="data-[checked=true]:bg-accent"
+                  style={{ fontFamily: cssFontFamily }}
                 >
                   {label}
                 </CommandItem>

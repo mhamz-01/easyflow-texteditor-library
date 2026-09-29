@@ -65,9 +65,17 @@
     &::-webkit-scrollbar {
       display: none;
     }
-    /* spacer that occupies same height as the toolbar so document flow is preserved */
-  
-    
+
+    /* Desktop: wrap instead of scrolling behind a hidden scrollbar, so every
+       control stays visible when the editor is narrow (e.g. sidebar open). */
+    @media (min-width: 769px) {
+      flex-wrap: wrap;
+      row-gap: 0.25rem;
+      overflow: visible;
+      padding: 0.25rem 0.5rem;
+      border-bottom: 1px solid #1e1e1e;
+    }
+
     /* Tablet view: 480px - 768px */
     @media (min-width: 481px) and (max-width: 768px) {
       height: auto;

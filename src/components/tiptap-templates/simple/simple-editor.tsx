@@ -413,6 +413,20 @@ export function SimpleEditor({ editable = true }: SimpleEditorProps) {
           role="presentation"
           autoFocus
           className="simple-editor-content"
+          onMouseDown={(event) => {
+            // Clicks in the gutter around the page place the caret at the
+            // nearest document position instead of doing nothing.
+            if (!editor || !editable || event.target !== event.currentTarget) return;
+            const rect = editor.view.dom.getBoundingClientRect();
+            const clamp = (v: number, min: number, max: number) =>
+              Math.min(Math.max(v, min), max);
+            const hit = editor.view.posAtCoords({
+              left: clamp(event.clientX, rect.left + 1, rect.right - 1),
+              top: clamp(event.clientY, rect.top + 1, rect.bottom - 1),
+            });
+            event.preventDefault();
+            editor.chain().focus(hit?.pos ?? "end").run();
+          }}
         >
           {editor && <BubbleMenuInline />}
         </EditorContent>

@@ -2,7 +2,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* C:/Users/hamza/AppData/Local/Temp/tmp-12792-nge1GlYanAPz/easyflow-texteditor-v1/src/styles/index.css */
+/* C:/Users/hamza/AppData/Local/Temp/tmp-41156-4EplPabcjI9v/easyflow-texteditor-v1/src/styles/index.css */
 .tiptap.ProseMirror {
   --blockquote-bg-color: var(--tt-gray-light-900);
 }
@@ -650,43 +650,28 @@
   height: 0.188rem;
   cursor: grabbing;
 }
-body {
+.easyflow-editor {
   --tt-toolbar-height: 44px;
   --tt-theme-text: var(--tt-gray-dark-900);
-}
-body {
   font-family: "Inter", sans-serif;
   color: var(--tt-theme-text);
   font-optical-sizing: auto;
   font-weight: 400;
   font-style: normal;
-  padding: 0;
-  overscroll-behavior-y: none;
 }
-html,
-body {
-  overscroll-behavior-x: none;
-  height: 100%;
-}
-html,
-body,
-#root,
-#app {
-  height: 100%;
-  background-color: var(--tt-bg-color);
-}
-::-webkit-scrollbar {
-  width: 0.25rem;
-}
-* {
+.easyflow-editor * {
   scrollbar-width: thin;
   scrollbar-color: var(--tt-scrollbar-color) transparent;
 }
-::-webkit-scrollbar-thumb {
+.easyflow-editor ::-webkit-scrollbar {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+.easyflow-editor ::-webkit-scrollbar-thumb {
   background-color: var(--tt-scrollbar-color);
   border-radius: 9999px;
 }
-::-webkit-scrollbar-track {
+.easyflow-editor ::-webkit-scrollbar-track {
   background: transparent;
 }
 .tiptap.ProseMirror {
@@ -695,33 +680,39 @@ body,
 .simple-editor-wrapper {
   width: 100%;
   height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
   box-sizing: border-box;
-  -webkit-overflow-scrolling: touch;
   position: relative;
 }
 .simple-editor-content {
-  max-width: 900px;
   width: 100%;
-  margin: 0 auto;
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  min-width: 0;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-top: 1rem;
+  scroll-padding-bottom: 4rem;
   box-sizing: border-box;
   padding: 1.25rem 1rem;
+  cursor: text;
 }
 .simple-editor-content .tiptap.ProseMirror.simple-editor {
-  flex: 1;
+  flex: 1 0 auto;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  box-sizing: border-box;
   padding: 4rem 3rem 30vh;
   min-width: 0;
-  max-width: 100%;
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;
@@ -1785,6 +1776,15 @@ table .column-resize-handle {
 .tiptap-toolbar[data-variant=fixed]::-webkit-scrollbar {
   display: none;
 }
+@media (min-width: 769px) {
+  .tiptap-toolbar[data-variant=fixed] {
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
+    overflow: visible;
+    padding: 0.25rem 0.5rem;
+    border-bottom: 1px solid #1e1e1e;
+  }
+}
 @media (min-width: 481px) and (max-width: 768px) {
   .tiptap-toolbar[data-variant=fixed] {
     height: auto;
@@ -1884,7 +1884,7 @@ table .column-resize-handle {
   color: var(--tt-kbd);
 }
 
-/* C:/Users/hamza/AppData/Local/Temp/tmp-12792-nge1GlYanAPz/easyflow-texteditor-v1/src/styles/_variables.css */
+/* C:/Users/hamza/AppData/Local/Temp/tmp-41156-4EplPabcjI9v/easyflow-texteditor-v1/src/styles/_variables.css */
 :root {
   overflow-wrap: break-word;
   text-size-adjust: none;
@@ -2116,7 +2116,7 @@ table .column-resize-handle {
   --tt-color-highlight-pink-contrast: rgba(220, 76, 145, 0.22);
 }
 
-/* C:/Users/hamza/AppData/Local/Temp/tmp-12792-nge1GlYanAPz/easyflow-texteditor-v1/src/styles/_keyframe-animations.css */
+/* C:/Users/hamza/AppData/Local/Temp/tmp-41156-4EplPabcjI9v/easyflow-texteditor-v1/src/styles/_keyframe-animations.css */
 @keyframes fadeIn {
   from {
     opacity: 0;

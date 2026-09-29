@@ -1,5 +1,5 @@
 // src/components/editor-shell/EditorShell.tsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 // src/contexts/EditorPortalContainer.tsx
 import { createContext, useContext } from "react";
@@ -15,10 +15,70 @@ function useEditorPortalContainer() {
   return useContext(EditorPortalContainerContext);
 }
 
+// src/lib/font.ts
+var font = (label, fallback) => ({
+  label,
+  cssFontFamily: `"${label}", ${fallback}`
+});
+var FONT_OPTIONS = [
+  font("Inter", "sans-serif"),
+  font("Roboto", "sans-serif"),
+  font("Open Sans", "sans-serif"),
+  font("Poppins", "sans-serif"),
+  font("Montserrat", "sans-serif"),
+  font("Lato", "sans-serif"),
+  font("Oswald", "sans-serif"),
+  font("Raleway", "sans-serif"),
+  font("Merriweather", "serif"),
+  font("Playfair Display", "serif"),
+  font("Ubuntu", "sans-serif"),
+  font("PT Sans", "sans-serif"),
+  font("Barlow", "sans-serif"),
+  font("Fira Sans", "sans-serif"),
+  font("Nunito", "sans-serif"),
+  font("Cabin", "sans-serif"),
+  font("Bebas Neue", "sans-serif"),
+  font("Source Serif Pro", "serif"),
+  font("Libre Baskerville", "serif"),
+  font("Rubik", "sans-serif"),
+  font("Inconsolata", "monospace"),
+  font("Work Sans", "sans-serif"),
+  font("Mulish", "sans-serif"),
+  font("Quicksand", "sans-serif"),
+  font("Kanit", "sans-serif"),
+  font("Teko", "sans-serif"),
+  font("Josefin Sans", "sans-serif"),
+  font("Philosopher", "sans-serif"),
+  font("Dancing Script", "cursive"),
+  font("Noto Serif", "serif"),
+  font("Manrope", "sans-serif"),
+  font("Space Grotesk", "sans-serif")
+];
+var DEFAULT_FONT_FAMILY = "DM Sans";
+var EDITOR_FONTS_URL = "https://fonts.googleapis.com/css2?" + [DEFAULT_FONT_FAMILY, ...FONT_OPTIONS.map((f) => f.label)].map((family) => `family=${family.replace(/ /g, "+")}:wght@400;700`).join("&") + "&display=swap";
+var FONTS_LINK_ID = "easyflow-editor-fonts";
+function loadEditorFonts() {
+  if (typeof document === "undefined") return;
+  if (document.getElementById(FONTS_LINK_ID)) return;
+  const link = document.createElement("link");
+  link.id = FONTS_LINK_ID;
+  link.rel = "stylesheet";
+  link.href = EDITOR_FONTS_URL;
+  document.head.appendChild(link);
+}
+function findFontOption(fontFamily) {
+  if (!fontFamily) return void 0;
+  const primary = fontFamily.split(",")[0].trim().replace(/^["']|["']$/g, "");
+  return FONT_OPTIONS.find((f) => f.label === primary);
+}
+
 // src/components/editor-shell/EditorShell.tsx
 import { jsx as jsx2 } from "react/jsx-runtime";
 function EditorShell({ children }) {
   const [container, setContainer] = useState(null);
+  useEffect(() => {
+    loadEditorFonts();
+  }, []);
   return /* @__PURE__ */ jsx2(
     "div",
     {
@@ -32,7 +92,7 @@ function EditorShell({ children }) {
 }
 
 // src/components/editorLayout/editorLayout.tsx
-import { useState as useState5, useEffect as useEffect2, useRef, useCallback as useCallback2 } from "react";
+import { useState as useState5, useEffect as useEffect4, useRef as useRef2, useCallback as useCallback2 } from "react";
 
 // src/components/ui/sidebar.tsx
 import * as React3 from "react";
@@ -570,7 +630,7 @@ var sidebarMenuButtonVariants = cva2(
 );
 
 // src/components/sidebar/EditorSidebar.tsx
-import { useState as useState4 } from "react";
+import { useEffect as useEffect3, useRef, useState as useState4 } from "react";
 import { MoreHorizontal, Plus, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -657,6 +717,7 @@ var tabVariants = {
     }
   }
 };
+var MENU_TRIGGER_CLASS = "shrink-0 rounded p-1 transition-all duration-200 hover:bg-accent/80 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 [@media(hover:none)]:opacity-100";
 var subtabVariants = {
   initial: { opacity: 0, x: -10, height: 0 },
   animate: {
@@ -696,6 +757,12 @@ function AppSidebar({
   const [editingSubId, setEditingSubId] = useState4(null);
   const [tempTitle, setTempTitle] = useState4("");
   const [openTabs, setOpenTabs] = useState4({});
+  useEffect3(() => {
+    if (!activeSubTabId || !activeTabId) return;
+    setOpenTabs(
+      (prev) => prev[activeTabId] ? prev : { ...prev, [activeTabId]: true }
+    );
+  }, [activeTabId, activeSubTabId]);
   const startRenameTab = (id, title) => {
     setEditingId(id);
     setEditingSubId(null);
@@ -715,6 +782,14 @@ function AppSidebar({
     if (!editingSubId || !onRenameSubTab) return;
     onRenameSubTab(tabId, editingSubId, tempTitle.trim() || "Untitled");
     setEditingSubId(null);
+  };
+  const pendingRenameRef = useRef(null);
+  const handleMenuCloseAutoFocus = (event) => {
+    const startRename = pendingRenameRef.current;
+    if (!startRename) return;
+    pendingRenameRef.current = null;
+    event.preventDefault();
+    startRename();
   };
   const toggleTabOpen = (tabId) => {
     setOpenTabs((prev) => ({
@@ -800,6 +875,7 @@ function AppSidebar({
                     "button",
                     {
                       className: "w-full truncate text-left text-sm transition-colors duration-200",
+                      title: tab.title,
                       onClick: () => onSelect(tab.id),
                       onDoubleClick: disableTabActions ? void 0 : () => startRenameTab(tab.id, tab.title),
                       children: tab.title
@@ -809,38 +885,57 @@ function AppSidebar({
                     /* @__PURE__ */ jsx10(DropdownMenuTrigger, { asChild: true, children: /* @__PURE__ */ jsx10(
                       "button",
                       {
-                        className: "opacity-0 group-hover:opacity-100 rounded p-1 transition-all duration-200 hover:bg-accent/80",
-                        "aria-label": "Tab options",
+                        className: `${MENU_TRIGGER_CLASS} ${isActiveTab ? "opacity-100" : ""}`,
+                        "aria-label": `Options for ${tab.title}`,
+                        title: "More options",
                         children: /* @__PURE__ */ jsx10(MoreHorizontal, { size: 14 })
                       }
                     ) }),
-                    /* @__PURE__ */ jsxs5(DropdownMenuContent, { align: "end", className: "w-40", children: [
-                      /* @__PURE__ */ jsx10(
-                        DropdownMenuItem,
-                        {
-                          onClick: () => {
-                            onAddSubTab(tab.id);
-                            setOpenTabs((prev) => ({
-                              ...prev,
-                              [tab.id]: true
-                            }));
-                          },
-                          className: "cursor-pointer transition-colors duration-150",
-                          children: "Add subtab"
-                        }
-                      ),
-                      canDeleteTab && /* @__PURE__ */ jsx10(
-                        DropdownMenuItem,
-                        {
-                          className: "text-red-500 cursor-pointer transition-colors duration-150 focus:text-red-600",
-                          onClick: (e) => {
-                            e.stopPropagation();
-                            onDelete(tab.id);
-                          },
-                          children: "Delete"
-                        }
-                      )
-                    ] })
+                    /* @__PURE__ */ jsxs5(
+                      DropdownMenuContent,
+                      {
+                        align: "end",
+                        className: "w-40",
+                        onCloseAutoFocus: handleMenuCloseAutoFocus,
+                        children: [
+                          /* @__PURE__ */ jsx10(
+                            DropdownMenuItem,
+                            {
+                              onClick: () => {
+                                pendingRenameRef.current = () => startRenameTab(tab.id, tab.title);
+                              },
+                              className: "cursor-pointer transition-colors duration-150",
+                              children: "Rename"
+                            }
+                          ),
+                          /* @__PURE__ */ jsx10(
+                            DropdownMenuItem,
+                            {
+                              onClick: () => {
+                                onAddSubTab(tab.id);
+                                setOpenTabs((prev) => ({
+                                  ...prev,
+                                  [tab.id]: true
+                                }));
+                              },
+                              className: "cursor-pointer transition-colors duration-150",
+                              children: "Add subtab"
+                            }
+                          ),
+                          canDeleteTab && /* @__PURE__ */ jsx10(
+                            DropdownMenuItem,
+                            {
+                              className: "text-red-500 cursor-pointer transition-colors duration-150 focus:text-red-600",
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                onDelete(tab.id);
+                              },
+                              children: "Delete"
+                            }
+                          )
+                        ]
+                      }
+                    )
                   ] })
                 ]
               }
@@ -894,6 +989,7 @@ function AppSidebar({
                           "button",
                           {
                             className: "w-full truncate text-left transition-colors duration-200",
+                            title: st.title,
                             onClick: () => onSelect(tab.id, st.id),
                             onDoubleClick: disableTabActions ? void 0 : () => startRenameSubTab(st.id, st.title),
                             children: st.title
@@ -903,24 +999,38 @@ function AppSidebar({
                           /* @__PURE__ */ jsx10(DropdownMenuTrigger, { asChild: true, children: /* @__PURE__ */ jsx10(
                             "button",
                             {
-                              className: "opacity-0 group-hover:opacity-100 rounded p-1 transition-all duration-200 hover:bg-accent/80",
-                              "aria-label": "Subtab options",
+                              className: `${MENU_TRIGGER_CLASS} ${isActiveSubTab ? "opacity-100" : ""}`,
+                              "aria-label": `Options for ${st.title}`,
+                              title: "More options",
                               children: /* @__PURE__ */ jsx10(MoreHorizontal, { size: 14 })
                             }
                           ) }),
-                          /* @__PURE__ */ jsx10(
+                          /* @__PURE__ */ jsxs5(
                             DropdownMenuContent,
                             {
                               align: "end",
                               className: "w-40",
-                              children: /* @__PURE__ */ jsx10(
-                                DropdownMenuItem,
-                                {
-                                  className: "text-red-500 cursor-pointer transition-colors duration-150 focus:text-red-600",
-                                  onClick: () => onDeleteSubTab(tab.id, st.id),
-                                  children: "Delete"
-                                }
-                              )
+                              onCloseAutoFocus: handleMenuCloseAutoFocus,
+                              children: [
+                                /* @__PURE__ */ jsx10(
+                                  DropdownMenuItem,
+                                  {
+                                    onClick: () => {
+                                      pendingRenameRef.current = () => startRenameSubTab(st.id, st.title);
+                                    },
+                                    className: "cursor-pointer transition-colors duration-150",
+                                    children: "Rename"
+                                  }
+                                ),
+                                /* @__PURE__ */ jsx10(
+                                  DropdownMenuItem,
+                                  {
+                                    className: "text-red-500 cursor-pointer transition-colors duration-150 focus:text-red-600",
+                                    onClick: () => onDeleteSubTab(tab.id, st.id),
+                                    children: "Delete"
+                                  }
+                                )
+                              ]
                             }
                           )
                         ] })
@@ -970,18 +1080,18 @@ function EditorLayout({
   restrictTabActions = false
 }) {
   const disableTabActions = restrictTabActions && !editable;
-  const hasInitialized = useRef(false);
+  const hasInitialized = useRef2(false);
   const [editor, setEditor] = useState5(null);
   const [tabs, setTabs] = useState5([]);
   const [activeTabId, setActiveTabId] = useState5("");
   const [activeSubTabId, setActiveSubTabId] = useState5(null);
-  const debouncedSaveRef = useRef(null);
-  const lastRestoredRef = useRef(null);
-  const isRestoringRef = useRef(false);
-  const onChangeDebounceRef = useRef(null);
-  const tabsRef = useRef(tabs);
-  const activeTabIdRef = useRef(activeTabId);
-  const activeSubTabIdRef = useRef(activeSubTabId);
+  const debouncedSaveRef = useRef2(null);
+  const lastRestoredRef = useRef2(null);
+  const isRestoringRef = useRef2(false);
+  const onChangeDebounceRef = useRef2(null);
+  const tabsRef = useRef2(tabs);
+  const activeTabIdRef = useRef2(activeTabId);
+  const activeSubTabIdRef = useRef2(activeSubTabId);
   const emitChangeDebounced = useCallback2(
     (payload) => {
       if (!onChange) return;
@@ -994,13 +1104,13 @@ function EditorLayout({
     },
     [onChange]
   );
-  useEffect2(() => {
+  useEffect4(() => {
     tabsRef.current = tabs;
   }, [tabs]);
-  useEffect2(() => {
+  useEffect4(() => {
     activeTabIdRef.current = activeTabId;
   }, [activeTabId]);
-  useEffect2(() => {
+  useEffect4(() => {
     activeSubTabIdRef.current = activeSubTabId;
   }, [activeSubTabId]);
   const emitChange = useCallback2(
@@ -1015,7 +1125,7 @@ function EditorLayout({
     [emitChangeDebounced]
     // ← stable, never recreated
   );
-  useEffect2(() => {
+  useEffect4(() => {
     if (initialTabs?.length === 0) {
       setTabs([{ id: "1", title: "Tab 1", content: null, subtabs: [] }]);
       setActiveTabId("1");
@@ -1024,15 +1134,15 @@ function EditorLayout({
       setActiveTabId(initialTabs?.[0]?.id ?? "");
     }
   }, [initialTabs]);
-  useEffect2(() => {
+  useEffect4(() => {
     onTabsChange?.(tabs);
   }, [tabs, onTabsChange]);
-  useEffect2(() => {
+  useEffect4(() => {
     return () => {
       hasInitialized.current = false;
     };
   }, []);
-  useEffect2(() => {
+  useEffect4(() => {
     if (hasInitialized.current) return;
     if (!initialTabs) return;
     hasInitialized.current = true;
@@ -1228,7 +1338,7 @@ function EditorLayout({
     });
     emitChange("delete-tab");
   };
-  useEffect2(() => {
+  useEffect4(() => {
     if (!editor) return;
     const key = { tabId: activeTabId, subTabId: activeSubTabId };
     if (lastRestoredRef.current && lastRestoredRef.current.tabId === key.tabId && lastRestoredRef.current.subTabId === key.subTabId) {
@@ -1243,6 +1353,7 @@ function EditorLayout({
     } else {
       editor.commands.clearContent();
     }
+    editor.view.dom.closest(".simple-editor-content")?.scrollTo({ top: 0 });
     lastRestoredRef.current = key;
     isRestoringRef.current = false;
   }, [editor, tabs, activeTabId, activeSubTabId]);
@@ -1255,7 +1366,7 @@ function EditorLayout({
     {
       style: { "--sidebar-width": "220px" },
       className: "h-full w-full overflow-hidden",
-      children: /* @__PURE__ */ jsxs6("div", { className: "flex h-screen w-full min-h-0 overflow-hidden", children: [
+      children: /* @__PURE__ */ jsxs6("div", { className: "flex h-full w-full min-h-0 overflow-hidden", children: [
         /* @__PURE__ */ jsx12(
           AppSidebar,
           {
@@ -1283,7 +1394,7 @@ function EditorLayout({
 }
 
 // src/components/tiptap-templates/simple/simple-editor.tsx
-import { useEffect as useEffect23, useRef as useRef7, useState as useState31 } from "react";
+import { useEffect as useEffect25, useRef as useRef8, useState as useState31 } from "react";
 import { EditorContent, EditorContext, useEditor } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
@@ -2032,7 +2143,7 @@ function Spacer({
 }
 
 // src/components/tiptap-ui-primitive/toolbar/toolbar.tsx
-import { forwardRef as forwardRef4, useCallback as useCallback4, useEffect as useEffect4, useRef as useRef3, useState as useState8 } from "react";
+import { forwardRef as forwardRef4, useCallback as useCallback4, useEffect as useEffect6, useRef as useRef4, useState as useState8 } from "react";
 
 // src/components/tiptap-ui-primitive/separator/separator.tsx
 import { forwardRef as forwardRef3 } from "react";
@@ -2056,7 +2167,7 @@ var Separator3 = forwardRef3(
 Separator3.displayName = "Separator";
 
 // src/hooks/use-menu-navigation.ts
-import { useEffect as useEffect3, useState as useState7 } from "react";
+import { useEffect as useEffect5, useState as useState7 } from "react";
 function useMenuNavigation({
   editor,
   containerRef,
@@ -2070,7 +2181,7 @@ function useMenuNavigation({
   const [selectedIndex, setSelectedIndex] = useState7(
     autoSelectFirstItem ? 0 : -1
   );
-  useEffect3(() => {
+  useEffect5(() => {
     const handleKeyboardNavigation = (event) => {
       if (!items.length) return false;
       const moveNext = () => setSelectedIndex((currentIndex) => {
@@ -2168,7 +2279,7 @@ function useMenuNavigation({
     onClose,
     orientation
   ]);
-  useEffect3(() => {
+  useEffect5(() => {
     if (query) {
       setSelectedIndex(autoSelectFirstItem ? 0 : -1);
     }
@@ -2180,7 +2291,7 @@ function useMenuNavigation({
 }
 
 // src/hooks/use-composed-ref.ts
-import { useCallback as useCallback3, useRef as useRef2 } from "react";
+import { useCallback as useCallback3, useRef as useRef3 } from "react";
 var updateRef = (ref, value) => {
   if (typeof ref === "function") {
     ref(value);
@@ -2190,7 +2301,7 @@ var updateRef = (ref, value) => {
   }
 };
 var useComposedRef = (libRef, userRef) => {
-  const prevUserRef = useRef2(null);
+  const prevUserRef = useRef3(null);
   return useCallback3(
     (instance) => {
       if (libRef && "current" in libRef) {
@@ -2221,7 +2332,7 @@ var useToolbarNavigation = (toolbarRef) => {
       )
     );
   }, [toolbarRef]);
-  useEffect4(() => {
+  useEffect6(() => {
     const toolbar = toolbarRef.current;
     if (!toolbar) return;
     const updateItems = () => setItems(collectItems());
@@ -2237,7 +2348,7 @@ var useToolbarNavigation = (toolbarRef) => {
     onSelect: (el) => el.click(),
     autoSelectFirstItem: false
   });
-  useEffect4(() => {
+  useEffect6(() => {
     const toolbar = toolbarRef.current;
     if (!toolbar) return;
     const handleFocus = (e) => {
@@ -2256,7 +2367,7 @@ var useToolbarNavigation = (toolbarRef) => {
       toolbar.removeEventListener("blur", handleBlur, true);
     };
   }, [toolbarRef]);
-  useEffect4(() => {
+  useEffect6(() => {
     if (selectedIndex !== void 0 && items[selectedIndex]) {
       items[selectedIndex].focus();
     }
@@ -2264,7 +2375,7 @@ var useToolbarNavigation = (toolbarRef) => {
 };
 var Toolbar = forwardRef4(
   ({ children, className, variant = "fixed", ...props }, ref) => {
-    const toolbarRef = useRef3(null);
+    const toolbarRef = useRef4(null);
     const composedRef = useComposedRef(toolbarRef, ref);
     useToolbarNavigation(toolbarRef);
     return /* @__PURE__ */ jsx17(
@@ -2424,7 +2535,7 @@ import { mergeAttributes as mergeAttributes2, Node as Node4 } from "@tiptap/reac
 import { ReactNodeViewRenderer } from "@tiptap/react";
 
 // src/components/tiptap-node/image-upload-node/image-upload-node.tsx
-import { useRef as useRef4, useState as useState9 } from "react";
+import { useRef as useRef5, useState as useState9 } from "react";
 import { NodeViewWrapper } from "@tiptap/react";
 
 // src/components/tiptap-icons/close-icon.tsx
@@ -2753,7 +2864,7 @@ var DropZoneContent = ({
 ] });
 var ImageUploadNode = (props) => {
   const { accept, limit, maxSize } = props.node.attrs;
-  const inputRef = useRef4(null);
+  const inputRef = useRef5(null);
   const extension = props.extension;
   const isEditable = props.editor.isEditable;
   const uploadOptions = {
@@ -3117,7 +3228,7 @@ var HeadingButton = forwardRef6(
 HeadingButton.displayName = "HeadingButton";
 
 // src/components/tiptap-ui/heading-button/use-heading.ts
-import { useCallback as useCallback6, useEffect as useEffect5, useState as useState10 } from "react";
+import { useCallback as useCallback6, useEffect as useEffect7, useState as useState10 } from "react";
 import { NodeSelection as NodeSelection2, TextSelection as TextSelection2 } from "@tiptap/pm/state";
 
 // src/components/tiptap-icons/heading-one-icon.tsx
@@ -3450,7 +3561,7 @@ function useHeading(config) {
   const [isVisible, setIsVisible] = useState10(true);
   const canToggleState = canToggle(editor, level);
   const isActive = isHeadingActive(editor, level);
-  useEffect5(() => {
+  useEffect7(() => {
     if (!editor) return;
     const handleSelectionUpdate = () => {
       setIsVisible(shouldShowButton({ editor, level, hideWhenUnavailable }));
@@ -3665,7 +3776,7 @@ var HeadingDropdownMenu = forwardRef9(
 HeadingDropdownMenu.displayName = "HeadingDropdownMenu";
 
 // src/components/tiptap-ui/heading-dropdown-menu/use-heading-dropdown-menu.ts
-import { useEffect as useEffect6, useState as useState12 } from "react";
+import { useEffect as useEffect8, useState as useState12 } from "react";
 
 // src/components/tiptap-icons/heading-icon.tsx
 import { memo as memo9 } from "react";
@@ -3709,7 +3820,7 @@ function useHeadingDropdownMenu(config) {
   const activeLevel = getActiveHeadingLevel(editor, levels);
   const isActive = isHeadingActive(editor);
   const canToggleState = canToggle(editor);
-  useEffect6(() => {
+  useEffect8(() => {
     if (!editor) return;
     const handleSelectionUpdate = () => {
       setIsVisible(
@@ -3807,14 +3918,14 @@ var ImageUploadButton = forwardRef10(
 ImageUploadButton.displayName = "ImageUploadButton";
 
 // src/components/tiptap-ui/image-upload-button/use-image-upload.ts
-import { useCallback as useCallback9, useEffect as useEffect8, useState as useState14 } from "react";
+import { useCallback as useCallback9, useEffect as useEffect10, useState as useState14 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 // src/hooks/use-is-breakpoint.ts
-import { useEffect as useEffect7, useState as useState13 } from "react";
+import { useEffect as useEffect9, useState as useState13 } from "react";
 function useIsBreakpoint(mode = "max", breakpoint = 768) {
   const [matches, setMatches] = useState13(void 0);
-  useEffect7(() => {
+  useEffect9(() => {
     const query = mode === "min" ? `(min-width: ${breakpoint}px)` : `(max-width: ${breakpoint - 1}px)`;
     const mql = window.matchMedia(query);
     const onChange = (e) => setMatches(e.matches);
@@ -3916,7 +4027,7 @@ function useImageUpload(config) {
   const [isVisible, setIsVisible] = useState14(true);
   const canInsert = canInsertImage(editor);
   const isActive = isImageActive(editor);
-  useEffect8(() => {
+  useEffect10(() => {
     if (!editor) return;
     const handleSelectionUpdate = () => {
       setIsVisible(shouldShowButton2({ editor, hideWhenUnavailable }));
@@ -4036,7 +4147,7 @@ var ListButton = forwardRef11(
 ListButton.displayName = "ListButton";
 
 // src/components/tiptap-ui/list-button/use-list.ts
-import { useCallback as useCallback11, useEffect as useEffect9, useState as useState15 } from "react";
+import { useCallback as useCallback11, useEffect as useEffect11, useState as useState15 } from "react";
 import { NodeSelection as NodeSelection3, TextSelection as TextSelection3 } from "@tiptap/pm/state";
 
 // src/components/tiptap-icons/list-icon.tsx
@@ -4387,7 +4498,7 @@ function useList(config) {
   const [isVisible, setIsVisible] = useState15(true);
   const canToggle2 = canToggleList(editor, type);
   const isActive = isListActive(editor, type);
-  useEffect9(() => {
+  useEffect11(() => {
     if (!editor) return;
     const handleSelectionUpdate = () => {
       setIsVisible(shouldShowButton3({ editor, type, hideWhenUnavailable }));
@@ -4418,7 +4529,7 @@ function useList(config) {
 }
 
 // src/components/tiptap-ui/list-dropdown-menu/use-list-dropdown-menu.ts
-import { useEffect as useEffect10, useMemo as useMemo5, useState as useState16 } from "react";
+import { useEffect as useEffect12, useMemo as useMemo5, useState as useState16 } from "react";
 var listOptions = [
   {
     label: "Bullet List",
@@ -4451,7 +4562,7 @@ function getFilteredListOptions(availableTypes) {
 }
 function shouldShowListDropdown(params) {
   const { editor, hideWhenUnavailable, listInSchema, canToggleAny } = params;
-  if (!listInSchema || !editor) {
+  if (!listInSchema || !editor || !editor.isEditable) {
     return false;
   }
   if (hideWhenUnavailable && !editor.isActive("code")) {
@@ -4477,7 +4588,7 @@ function useListDropdownMenu(config) {
   const isAnyActive = isAnyListActive(editor, types);
   const activeType = getActiveListType(editor, types);
   const activeList = filteredLists.find((option) => option.type === activeType);
-  useEffect10(() => {
+  useEffect12(() => {
     if (!editor) return;
     const handleSelectionUpdate = () => {
       setIsVisible(
@@ -4639,7 +4750,7 @@ var BlockquoteButton = forwardRef12(
 BlockquoteButton.displayName = "BlockquoteButton";
 
 // src/components/tiptap-ui/blockquote-button/use-blockquote.ts
-import { useCallback as useCallback14, useEffect as useEffect11, useState as useState18 } from "react";
+import { useCallback as useCallback14, useEffect as useEffect13, useState as useState18 } from "react";
 import { NodeSelection as NodeSelection4, TextSelection as TextSelection4 } from "@tiptap/pm/state";
 
 // src/components/tiptap-icons/blockquote-icon.tsx
@@ -4775,7 +4886,7 @@ function useBlockquote(config) {
   const [isVisible, setIsVisible] = useState18(true);
   const canToggle2 = canToggleBlockquote(editor);
   const isActive = editor?.isActive("blockquote") || false;
-  useEffect11(() => {
+  useEffect13(() => {
     if (!editor) return;
     const handleSelectionUpdate = () => {
       setIsVisible(shouldShowButton4({ editor, hideWhenUnavailable }));
@@ -4806,7 +4917,7 @@ function useBlockquote(config) {
 }
 
 // src/components/tiptap-ui/color-highlight-popover/color-highlight-popover.tsx
-import { forwardRef as forwardRef14, useMemo as useMemo7, useRef as useRef5, useState as useState20 } from "react";
+import { forwardRef as forwardRef14, useMemo as useMemo7, useRef as useRef6, useState as useState20 } from "react";
 
 // src/components/tiptap-icons/ban-icon.tsx
 import { memo as memo15 } from "react";
@@ -4986,7 +5097,7 @@ var ColorHighlightButton = forwardRef13(
 ColorHighlightButton.displayName = "ColorHighlightButton";
 
 // src/components/tiptap-ui/color-highlight-button/use-color-highlight.ts
-import { useCallback as useCallback16, useEffect as useEffect12, useState as useState19 } from "react";
+import { useCallback as useCallback16, useEffect as useEffect14, useState as useState19 } from "react";
 import { useHotkeys as useHotkeys2 } from "react-hotkeys-hook";
 var COLOR_HIGHLIGHT_SHORTCUT_KEY = "mod+shift+h";
 var HIGHLIGHT_COLORS = [
@@ -5120,7 +5231,7 @@ function useColorHighlight(config) {
   const [isVisible, setIsVisible] = useState19(true);
   const canColorHighlightState = canColorHighlight(editor, mode);
   const isActive = isColorHighlightActive(editor, highlightColor, mode);
-  useEffect12(() => {
+  useEffect14(() => {
     if (!editor) return;
     const handleSelectionUpdate = () => {
       setIsVisible(shouldShowButton5({ editor, hideWhenUnavailable, mode }));
@@ -5222,7 +5333,7 @@ function ColorHighlightPopoverContent({
 }) {
   const { handleRemoveHighlight } = useColorHighlight({ editor });
   const isMobile = useIsBreakpoint();
-  const containerRef = useRef5(null);
+  const containerRef = useRef6(null);
   const menuItems = useMemo7(
     () => [...colors, { label: "Remove highlight", value: "none" }],
     [colors]
@@ -5282,7 +5393,7 @@ function ColorHighlightPopoverContent({
 }
 
 // src/components/tiptap-ui/link-popover/link-popover.tsx
-import { forwardRef as forwardRef15, useCallback as useCallback17, useEffect as useEffect13, useState as useState21 } from "react";
+import { forwardRef as forwardRef15, useCallback as useCallback17, useEffect as useEffect15, useState as useState21 } from "react";
 
 // src/components/tiptap-icons/corner-down-left-icon.tsx
 import { memo as memo17 } from "react";
@@ -5583,7 +5694,7 @@ var LinkPopover = forwardRef15(
       },
       [onClick, isOpen]
     );
-    useEffect13(() => {
+    useEffect15(() => {
       if (autoOpenOnLinkActive && isActive) {
         setIsOpen(true);
       }
@@ -5623,7 +5734,7 @@ var LinkPopover = forwardRef15(
 LinkPopover.displayName = "LinkPopover";
 
 // src/components/tiptap-ui/link-popover/use-link-popover.ts
-import { useCallback as useCallback18, useEffect as useEffect14, useState as useState22 } from "react";
+import { useCallback as useCallback18, useEffect as useEffect16, useState as useState22 } from "react";
 function canSetLink(editor) {
   if (!editor || !editor.isEditable) return false;
   if (isNodeTypeSelected(editor, ["image"], true)) return false;
@@ -5647,14 +5758,14 @@ function shouldShowLinkButton(props) {
 function useLinkHandler(props) {
   const { editor, onSetLink } = props;
   const [url, setUrl] = useState22(null);
-  useEffect14(() => {
+  useEffect16(() => {
     if (!editor) return;
     const { href } = editor.getAttributes("link");
     if (isLinkActive(editor) && url === null) {
       setUrl(href || "");
     }
   }, [editor, url]);
-  useEffect14(() => {
+  useEffect16(() => {
     if (!editor) return;
     const updateLinkState = () => {
       const { href } = editor.getAttributes("link");
@@ -5706,7 +5817,7 @@ function useLinkState(props) {
   const canSet = canSetLink(editor);
   const isActive = isLinkActive(editor);
   const [isVisible, setIsVisible] = useState22(true);
-  useEffect14(() => {
+  useEffect16(() => {
     if (!editor) return;
     const handleSelectionUpdate = () => {
       setIsVisible(
@@ -5828,7 +5939,7 @@ var MarkButton = forwardRef16(
 MarkButton.displayName = "MarkButton";
 
 // src/components/tiptap-ui/mark-button/use-mark.ts
-import { useCallback as useCallback20, useEffect as useEffect15, useState as useState23 } from "react";
+import { useCallback as useCallback20, useEffect as useEffect17, useState as useState23 } from "react";
 
 // src/components/tiptap-icons/bold-icon.tsx
 import { memo as memo21 } from "react";
@@ -6142,7 +6253,7 @@ function useMark(config) {
   const [isVisible, setIsVisible] = useState23(true);
   const canToggle2 = canToggleMark(editor, type);
   const isActive = isMarkActive(editor, type);
-  useEffect15(() => {
+  useEffect17(() => {
     if (!editor) return;
     const handleSelectionUpdate = () => {
       setIsVisible(shouldShowButton6({ editor, type, hideWhenUnavailable }));
@@ -6255,7 +6366,7 @@ var TextAlignButton = forwardRef17(
 TextAlignButton.displayName = "TextAlignButton";
 
 // src/components/tiptap-ui/text-align-button/use-text-align.ts
-import { useCallback as useCallback22, useEffect as useEffect16, useState as useState24 } from "react";
+import { useCallback as useCallback22, useEffect as useEffect18, useState as useState24 } from "react";
 
 // src/components/tiptap-icons/align-center-icon.tsx
 import { memo as memo28 } from "react";
@@ -6510,7 +6621,7 @@ function useTextAlign(config) {
   const [isVisible, setIsVisible] = useState24(true);
   const canAlign = canSetTextAlign(editor, align);
   const isActive = isTextAlignActive(editor, align);
-  useEffect16(() => {
+  useEffect18(() => {
     if (!editor) return;
     const handleSelectionUpdate = () => {
       setIsVisible(shouldShowButton7({ editor, align, hideWhenUnavailable }));
@@ -6611,7 +6722,7 @@ var UndoRedoButton = forwardRef18(
 UndoRedoButton.displayName = "UndoRedoButton";
 
 // src/components/tiptap-ui/undo-redo-button/use-undo-redo.ts
-import { useCallback as useCallback24, useEffect as useEffect17, useState as useState25 } from "react";
+import { useCallback as useCallback24, useEffect as useEffect19, useState as useState25 } from "react";
 
 // src/components/tiptap-icons/redo2-icon.tsx
 import { memo as memo32 } from "react";
@@ -6711,7 +6822,7 @@ function useUndoRedo(config) {
   const { editor } = useTiptapEditor(providedEditor);
   const [isVisible, setIsVisible] = useState25(true);
   const canExecute = canExecuteUndoRedoAction(editor, action);
-  useEffect17(() => {
+  useEffect19(() => {
     if (!editor) return;
     const handleUpdate = () => {
       setIsVisible(shouldShowButton8({ editor, hideWhenUnavailable, action }));
@@ -6743,44 +6854,6 @@ function useUndoRedo(config) {
 // src/components/tiptap-ui/font-family-dropdown/font-family-dropdown.tsx
 import { useCurrentEditor as useCurrentEditor3 } from "@tiptap/react";
 import { useState as useState26 } from "react";
-
-// src/lib/font.ts
-var FONT_OPTIONS = [
-  { label: "Inter", cssFontFamily: "Inter" },
-  { label: "Roboto", cssFontFamily: "Roboto" },
-  { label: "Open Sans", cssFontFamily: "Opensans" },
-  { label: "Poppins", cssFontFamily: "Poppins" },
-  { label: "Montserrat", cssFontFamily: "Montserrat" },
-  { label: "Lato", cssFontFamily: "Lato" },
-  { label: "Oswald", cssFontFamily: "Oswald" },
-  { label: "Raleway", cssFontFamily: "Raleway" },
-  { label: "Merriweather", cssFontFamily: "Merriweather" },
-  { label: "Playfair Display", cssFontFamily: "Playfair" },
-  { label: "Ubuntu", cssFontFamily: "Ubuntu" },
-  { label: "PT Sans", cssFontFamily: "Ptsans" },
-  { label: "Barlow", cssFontFamily: "Barlow" },
-  { label: "Fira Sans", cssFontFamily: "Fira" },
-  { label: "Nunito", cssFontFamily: "Nunito" },
-  { label: "Cabin", cssFontFamily: "Cabin" },
-  { label: "Bebas Neue", cssFontFamily: "Bebas" },
-  { label: "Source Serif Pro", cssFontFamily: "Sourceserif" },
-  { label: "Libre Baskerville", cssFontFamily: "Librebask" },
-  { label: "Rubik", cssFontFamily: "Rubik" },
-  { label: "Inconsolata", cssFontFamily: "Inconsolata" },
-  { label: "Work Sans", cssFontFamily: "Worksans" },
-  { label: "Mulish", cssFontFamily: "Mulish" },
-  { label: "Quicksand", cssFontFamily: "Quicksand" },
-  { label: "Kanit", cssFontFamily: "Kanit" },
-  { label: "Teko", cssFontFamily: "Teko" },
-  { label: "Josefin Sans", cssFontFamily: "Josefin" },
-  { label: "Philosopher", cssFontFamily: "Philosopher" },
-  { label: "Dancing Script", cssFontFamily: "Dancing" },
-  { label: "Noto Serif", cssFontFamily: "Notoserif" },
-  { label: "Manrope", cssFontFamily: "Manrope" },
-  { label: "Space Grotesk", cssFontFamily: "Spacegrotesk" }
-];
-
-// src/components/tiptap-ui/font-family-dropdown/font-family-dropdown.tsx
 import { ChevronDown } from "lucide-react";
 
 // src/components/ui/command.tsx
@@ -6929,8 +7002,10 @@ import { jsx as jsx72, jsxs as jsxs43 } from "react/jsx-runtime";
 function FontFamilyDropdown() {
   const { editor } = useCurrentEditor3();
   const [open, setOpen] = useState26(false);
-  if (!editor) return null;
-  const currentFont = editor.getAttributes("textStyle").fontFamily || "Font Family";
+  if (!editor || !editor.isEditable) return null;
+  const currentFamily = editor.getAttributes("textStyle").fontFamily;
+  const currentOption = findFontOption(currentFamily);
+  const currentLabel = currentOption?.label ?? "Default";
   const applyFont = (family) => {
     if (!editor) return;
     if (editor.state.storedMarks) {
@@ -6951,10 +7026,19 @@ function FontFamilyDropdown() {
       Button,
       {
         variant: "outlineFontFamily",
-        className: "\n            min-w-[90px] h-7 px-2 flex items-center justify-between rounded-sm\n            border-[#a3a3a8] text-[#a3a3a8]\n            hover:border-[#000] hover:text-[#fff] transition-colors\n          ",
+        "aria-label": "Font family",
+        title: currentLabel,
+        className: "\r\n            w-[132px] h-7 px-2 flex items-center justify-between gap-1 rounded-sm\r\n            border-[#a3a3a8] text-[#a3a3a8]\r\n            hover:border-[#000] hover:text-[#fff] transition-colors\r\n          ",
         children: [
-          currentFont,
-          /* @__PURE__ */ jsx72(ChevronDown, { className: "w-4 h-4" })
+          /* @__PURE__ */ jsx72(
+            "span",
+            {
+              className: "truncate",
+              style: { fontFamily: currentOption?.cssFontFamily },
+              children: currentLabel
+            }
+          ),
+          /* @__PURE__ */ jsx72(ChevronDown, { className: "w-4 h-4 shrink-0" })
         ]
       }
     ) }),
@@ -7000,10 +7084,13 @@ function FontFamilyDropdown() {
               FONT_OPTIONS.map(({ label, cssFontFamily }) => /* @__PURE__ */ jsx72(
                 CommandItem,
                 {
+                  value: label,
                   onSelect: () => {
-                    applyFont(label);
+                    applyFont(cssFontFamily);
                     setOpen(false);
                   },
+                  "data-checked": currentOption?.label === label,
+                  className: "data-[checked=true]:bg-accent",
                   style: { fontFamily: cssFontFamily },
                   children: label
                 },
@@ -7018,7 +7105,7 @@ function FontFamilyDropdown() {
 }
 
 // src/components/tiptap-ui/color-picker/color-picker.tsx
-import { useState as useState27, useEffect as useEffect18 } from "react";
+import { useState as useState27, useEffect as useEffect20 } from "react";
 import { useCurrentEditor as useCurrentEditor4 } from "@tiptap/react";
 import { HexColorPicker } from "react-colorful";
 
@@ -7136,12 +7223,12 @@ function ColorPicker({ type = "text" }) {
   const [showCustom, setShowCustom] = useState27(false);
   const [tempHex, setTempHex] = useState27("#000000");
   const [canApply, setCanApply] = useState27(false);
-  useEffect18(() => {
+  useEffect20(() => {
     const current = type === "text" ? editor?.getAttributes("textStyle").color || "#000000" : editor?.getAttributes("highlight")?.color || "#FFFF00";
     setColor(current);
     setTempHex(current);
   }, [editor, type]);
-  useEffect18(() => {
+  useEffect20(() => {
     const check = () => {
       try {
         setCanApply(!editor?.state.selection.empty);
@@ -7177,7 +7264,7 @@ function ColorPicker({ type = "text" }) {
     () => debounce((v) => setTempHex(v), 50),
     []
   );
-  if (!editor) return null;
+  if (!editor || !editor.isEditable) return null;
   return /* @__PURE__ */ jsxs44(Popover2, { open, onOpenChange: (v) => setOpen(v), children: [
     /* @__PURE__ */ jsx74(PopoverTrigger2, { asChild: true, children: /* @__PURE__ */ jsxs44(
       Button,
@@ -7309,7 +7396,7 @@ import { jsx as jsx75, jsxs as jsxs45 } from "react/jsx-runtime";
 function TableDropdownMenu() {
   const { editor } = useCurrentEditor5();
   const [open, setOpen] = useState28(false);
-  if (!editor) return null;
+  if (!editor || !editor.isEditable) return null;
   const handleAction = (action) => {
     switch (action) {
       case "insert":
@@ -7394,17 +7481,17 @@ var ArrowLeftIcon = memo34(({ className, ...props }) => {
 ArrowLeftIcon.displayName = "ArrowLeftIcon";
 
 // src/hooks/use-window-size.ts
-import { useEffect as useEffect20, useState as useState29 } from "react";
+import { useEffect as useEffect22, useState as useState29 } from "react";
 
 // src/hooks/use-throttled-callback.ts
 import throttle from "lodash.throttle";
 
 // src/hooks/use-unmount.ts
-import { useRef as useRef6, useEffect as useEffect19 } from "react";
+import { useRef as useRef7, useEffect as useEffect21 } from "react";
 var useUnmount = (callback) => {
-  const ref = useRef6(callback);
+  const ref = useRef7(callback);
   ref.current = callback;
-  useEffect19(
+  useEffect21(
     () => () => {
       ref.current();
     },
@@ -7457,7 +7544,7 @@ function useWindowSize() {
       return { width, height, offsetTop, offsetLeft, scale };
     });
   }, 200);
-  useEffect20(() => {
+  useEffect22(() => {
     const visualViewport = window.visualViewport;
     if (!visualViewport) return;
     visualViewport.addEventListener("resize", handleViewportChange);
@@ -7470,7 +7557,7 @@ function useWindowSize() {
 }
 
 // src/hooks/use-element-rect.ts
-import { useCallback as useCallback25, useEffect as useEffect21, useState as useState30 } from "react";
+import { useCallback as useCallback25, useEffect as useEffect23, useState as useState30 } from "react";
 var initialRect = {
   x: 0,
   y: 0,
@@ -7528,7 +7615,7 @@ function useElementRect({
     [enabled, getTargetElement],
     { leading: true, trailing: true }
   );
-  useEffect21(() => {
+  useEffect23(() => {
     if (!enabled || !isClientSide()) {
       setRect(initialRect);
       return;
@@ -7569,7 +7656,7 @@ function useRefRect(ref, options = {}) {
 }
 
 // src/hooks/use-cursor-visibility.ts
-import { useEffect as useEffect22 } from "react";
+import { useEffect as useEffect24 } from "react";
 function useCursorVisibility({
   editor,
   overlayHeight = 0
@@ -7580,7 +7667,7 @@ function useCursorVisibility({
     throttleMs: 100,
     useResizeObserver: true
   });
-  useEffect22(() => {
+  useEffect24(() => {
     const ensureCursorVisibility = () => {
       if (!editor) return;
       const { state, view } = editor;
@@ -7689,8 +7776,8 @@ function SimpleEditor({ editable = true }) {
   const [mobileView, setMobileView] = useState31(
     "main"
   );
-  const toolbarRef = useRef7(null);
-  const editableRef = useRef7(editable);
+  const toolbarRef = useRef8(null);
+  const editableRef = useRef8(editable);
   editableRef.current = editable;
   const editor = useEditor({
     immediatelyRender: false,
@@ -7764,13 +7851,13 @@ function SimpleEditor({ editable = true }) {
       debouncedSave(editor2);
     }
   });
-  useEffect23(() => {
+  useEffect25(() => {
     if (editor) {
       console.log("\u{1F527} Setting editor content in context");
       setEditorContent(editor);
     }
   }, [editor, setEditorContent]);
-  useEffect23(() => {
+  useEffect25(() => {
     if (editor && editor.isEditable !== editable) {
       editor.setEditable(editable);
     }
@@ -7779,17 +7866,17 @@ function SimpleEditor({ editable = true }) {
     editor,
     overlayHeight: toolbarRef.current?.getBoundingClientRect().height ?? 0
   });
-  useEffect23(() => {
+  useEffect25(() => {
     if (!isMobile && mobileView !== "main") {
       setMobileView("main");
     }
   }, [isMobile, mobileView]);
-  useEffect23(() => {
+  useEffect25(() => {
     if (editor) {
       editor.commands.focus("start");
     }
   }, [editor]);
-  useEffect23(() => {
+  useEffect25(() => {
     if (!window?.visualViewport) return;
     const toolbar = document.querySelector(
       ".tiptap-toolbar[data-variant='fixed']"
@@ -7847,6 +7934,17 @@ function SimpleEditor({ editable = true }) {
         role: "presentation",
         autoFocus: true,
         className: "simple-editor-content",
+        onMouseDown: (event) => {
+          if (!editor || !editable || event.target !== event.currentTarget) return;
+          const rect2 = editor.view.dom.getBoundingClientRect();
+          const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+          const hit = editor.view.posAtCoords({
+            left: clamp(event.clientX, rect2.left + 1, rect2.right - 1),
+            top: clamp(event.clientY, rect2.top + 1, rect2.bottom - 1)
+          });
+          event.preventDefault();
+          editor.chain().focus(hit?.pos ?? "end").run();
+        },
         children: editor && /* @__PURE__ */ jsx77(BubbleMenuInline, {})
       }
     )
@@ -7870,11 +7968,11 @@ function Editor({ onChange, className, style, initialTabs, onTabsChange, editabl
 }
 
 // src/hooks/use-scrolling.ts
-import { useEffect as useEffect24, useState as useState32 } from "react";
+import { useEffect as useEffect26, useState as useState32 } from "react";
 function useScrolling(target, options = {}) {
   const { debounce: debounce2 = 150, fallbackToDocument = true } = options;
   const [isScrolling, setIsScrolling] = useState32(false);
-  useEffect24(() => {
+  useEffect26(() => {
     const element = target && typeof Window !== "undefined" && target instanceof Window ? target : target?.current ?? window;
     const eventTarget = fallbackToDocument && element === window && typeof document !== "undefined" ? document : element;
     const on = (el, event, handler) => el.addEventListener(event, handler, true);
@@ -7948,6 +8046,7 @@ function loadImageBase64(key) {
   return localStorage.getItem(key);
 }
 export {
+  EDITOR_FONTS_URL,
   Editor,
   EditorBridgeProvider,
   EditorPortalContainerProvider,
@@ -7955,7 +8054,9 @@ export {
   GRADIENT_ROWS_70,
   cn,
   fileToBase64,
+  findFontOption,
   loadActiveTab,
+  loadEditorFonts,
   loadImageBase64,
   loadTabs,
   saveActiveTab,

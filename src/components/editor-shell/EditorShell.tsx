@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
-import { SidebarProvider } from "../../components/ui/sidebar"
+import { useEffect, useState, type ReactNode } from "react"
 import { EditorPortalContainerProvider } from "../../contexts/EditorPortalContainer"
+import { loadEditorFonts } from "../../lib/font"
 import React from "react"
 
 interface EditorShellProps {
@@ -11,6 +11,10 @@ interface EditorShellProps {
 
 export function EditorShell({ children }: EditorShellProps) {
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    loadEditorFonts()
+  }, [])
 
   return (
     <div

@@ -30,6 +30,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var index_exports = {};
 __export(index_exports, {
+  EDITOR_FONTS_URL: () => EDITOR_FONTS_URL,
   Editor: () => Editor,
   EditorBridgeProvider: () => EditorBridgeProvider,
   EditorPortalContainerProvider: () => EditorPortalContainerProvider,
@@ -37,7 +38,9 @@ __export(index_exports, {
   GRADIENT_ROWS_70: () => GRADIENT_ROWS_70,
   cn: () => cn,
   fileToBase64: () => fileToBase64,
+  findFontOption: () => findFontOption,
   loadActiveTab: () => loadActiveTab,
+  loadEditorFonts: () => loadEditorFonts,
   loadImageBase64: () => loadImageBase64,
   loadTabs: () => loadTabs,
   saveActiveTab: () => saveActiveTab,
@@ -78,10 +81,70 @@ function useEditorPortalContainer() {
   return (0, import_react.useContext)(EditorPortalContainerContext);
 }
 
+// src/lib/font.ts
+var font = (label, fallback) => ({
+  label,
+  cssFontFamily: `"${label}", ${fallback}`
+});
+var FONT_OPTIONS = [
+  font("Inter", "sans-serif"),
+  font("Roboto", "sans-serif"),
+  font("Open Sans", "sans-serif"),
+  font("Poppins", "sans-serif"),
+  font("Montserrat", "sans-serif"),
+  font("Lato", "sans-serif"),
+  font("Oswald", "sans-serif"),
+  font("Raleway", "sans-serif"),
+  font("Merriweather", "serif"),
+  font("Playfair Display", "serif"),
+  font("Ubuntu", "sans-serif"),
+  font("PT Sans", "sans-serif"),
+  font("Barlow", "sans-serif"),
+  font("Fira Sans", "sans-serif"),
+  font("Nunito", "sans-serif"),
+  font("Cabin", "sans-serif"),
+  font("Bebas Neue", "sans-serif"),
+  font("Source Serif Pro", "serif"),
+  font("Libre Baskerville", "serif"),
+  font("Rubik", "sans-serif"),
+  font("Inconsolata", "monospace"),
+  font("Work Sans", "sans-serif"),
+  font("Mulish", "sans-serif"),
+  font("Quicksand", "sans-serif"),
+  font("Kanit", "sans-serif"),
+  font("Teko", "sans-serif"),
+  font("Josefin Sans", "sans-serif"),
+  font("Philosopher", "sans-serif"),
+  font("Dancing Script", "cursive"),
+  font("Noto Serif", "serif"),
+  font("Manrope", "sans-serif"),
+  font("Space Grotesk", "sans-serif")
+];
+var DEFAULT_FONT_FAMILY = "DM Sans";
+var EDITOR_FONTS_URL = "https://fonts.googleapis.com/css2?" + [DEFAULT_FONT_FAMILY, ...FONT_OPTIONS.map((f) => f.label)].map((family) => `family=${family.replace(/ /g, "+")}:wght@400;700`).join("&") + "&display=swap";
+var FONTS_LINK_ID = "easyflow-editor-fonts";
+function loadEditorFonts() {
+  if (typeof document === "undefined") return;
+  if (document.getElementById(FONTS_LINK_ID)) return;
+  const link = document.createElement("link");
+  link.id = FONTS_LINK_ID;
+  link.rel = "stylesheet";
+  link.href = EDITOR_FONTS_URL;
+  document.head.appendChild(link);
+}
+function findFontOption(fontFamily) {
+  if (!fontFamily) return void 0;
+  const primary = fontFamily.split(",")[0].trim().replace(/^["']|["']$/g, "");
+  return FONT_OPTIONS.find((f) => f.label === primary);
+}
+
 // src/components/editor-shell/EditorShell.tsx
 var import_jsx_runtime2 = require("react/jsx-runtime");
 function EditorShell({ children }) {
   const [container, setContainer] = (0, import_react2.useState)(null);
+  (0, import_react2.useEffect)(() => {
+    loadEditorFonts();
+  }, []);
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
     "div",
     {
@@ -720,6 +783,7 @@ var tabVariants = {
     }
   }
 };
+var MENU_TRIGGER_CLASS = "shrink-0 rounded p-1 transition-all duration-200 hover:bg-accent/80 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 [@media(hover:none)]:opacity-100";
 var subtabVariants = {
   initial: { opacity: 0, x: -10, height: 0 },
   animate: {
@@ -759,6 +823,12 @@ function AppSidebar({
   const [editingSubId, setEditingSubId] = (0, import_react3.useState)(null);
   const [tempTitle, setTempTitle] = (0, import_react3.useState)("");
   const [openTabs, setOpenTabs] = (0, import_react3.useState)({});
+  (0, import_react3.useEffect)(() => {
+    if (!activeSubTabId || !activeTabId) return;
+    setOpenTabs(
+      (prev) => prev[activeTabId] ? prev : { ...prev, [activeTabId]: true }
+    );
+  }, [activeTabId, activeSubTabId]);
   const startRenameTab = (id, title) => {
     setEditingId(id);
     setEditingSubId(null);
@@ -778,6 +848,14 @@ function AppSidebar({
     if (!editingSubId || !onRenameSubTab) return;
     onRenameSubTab(tabId, editingSubId, tempTitle.trim() || "Untitled");
     setEditingSubId(null);
+  };
+  const pendingRenameRef = (0, import_react3.useRef)(null);
+  const handleMenuCloseAutoFocus = (event) => {
+    const startRename = pendingRenameRef.current;
+    if (!startRename) return;
+    pendingRenameRef.current = null;
+    event.preventDefault();
+    startRename();
   };
   const toggleTabOpen = (tabId) => {
     setOpenTabs((prev) => ({
@@ -863,6 +941,7 @@ function AppSidebar({
                     "button",
                     {
                       className: "w-full truncate text-left text-sm transition-colors duration-200",
+                      title: tab.title,
                       onClick: () => onSelect(tab.id),
                       onDoubleClick: disableTabActions ? void 0 : () => startRenameTab(tab.id, tab.title),
                       children: tab.title
@@ -872,38 +951,57 @@ function AppSidebar({
                     /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(DropdownMenuTrigger, { asChild: true, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                       "button",
                       {
-                        className: "opacity-0 group-hover:opacity-100 rounded p-1 transition-all duration-200 hover:bg-accent/80",
-                        "aria-label": "Tab options",
+                        className: `${MENU_TRIGGER_CLASS} ${isActiveTab ? "opacity-100" : ""}`,
+                        "aria-label": `Options for ${tab.title}`,
+                        title: "More options",
                         children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_lucide_react4.MoreHorizontal, { size: 14 })
                       }
                     ) }),
-                    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(DropdownMenuContent, { align: "end", className: "w-40", children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
-                        DropdownMenuItem,
-                        {
-                          onClick: () => {
-                            onAddSubTab(tab.id);
-                            setOpenTabs((prev) => ({
-                              ...prev,
-                              [tab.id]: true
-                            }));
-                          },
-                          className: "cursor-pointer transition-colors duration-150",
-                          children: "Add subtab"
-                        }
-                      ),
-                      canDeleteTab && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
-                        DropdownMenuItem,
-                        {
-                          className: "text-red-500 cursor-pointer transition-colors duration-150 focus:text-red-600",
-                          onClick: (e) => {
-                            e.stopPropagation();
-                            onDelete(tab.id);
-                          },
-                          children: "Delete"
-                        }
-                      )
-                    ] })
+                    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+                      DropdownMenuContent,
+                      {
+                        align: "end",
+                        className: "w-40",
+                        onCloseAutoFocus: handleMenuCloseAutoFocus,
+                        children: [
+                          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+                            DropdownMenuItem,
+                            {
+                              onClick: () => {
+                                pendingRenameRef.current = () => startRenameTab(tab.id, tab.title);
+                              },
+                              className: "cursor-pointer transition-colors duration-150",
+                              children: "Rename"
+                            }
+                          ),
+                          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+                            DropdownMenuItem,
+                            {
+                              onClick: () => {
+                                onAddSubTab(tab.id);
+                                setOpenTabs((prev) => ({
+                                  ...prev,
+                                  [tab.id]: true
+                                }));
+                              },
+                              className: "cursor-pointer transition-colors duration-150",
+                              children: "Add subtab"
+                            }
+                          ),
+                          canDeleteTab && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+                            DropdownMenuItem,
+                            {
+                              className: "text-red-500 cursor-pointer transition-colors duration-150 focus:text-red-600",
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                onDelete(tab.id);
+                              },
+                              children: "Delete"
+                            }
+                          )
+                        ]
+                      }
+                    )
                   ] })
                 ]
               }
@@ -957,6 +1055,7 @@ function AppSidebar({
                           "button",
                           {
                             className: "w-full truncate text-left transition-colors duration-200",
+                            title: st.title,
                             onClick: () => onSelect(tab.id, st.id),
                             onDoubleClick: disableTabActions ? void 0 : () => startRenameSubTab(st.id, st.title),
                             children: st.title
@@ -966,24 +1065,38 @@ function AppSidebar({
                           /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(DropdownMenuTrigger, { asChild: true, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                             "button",
                             {
-                              className: "opacity-0 group-hover:opacity-100 rounded p-1 transition-all duration-200 hover:bg-accent/80",
-                              "aria-label": "Subtab options",
+                              className: `${MENU_TRIGGER_CLASS} ${isActiveSubTab ? "opacity-100" : ""}`,
+                              "aria-label": `Options for ${st.title}`,
+                              title: "More options",
                               children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_lucide_react4.MoreHorizontal, { size: 14 })
                             }
                           ) }),
-                          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+                          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
                             DropdownMenuContent,
                             {
                               align: "end",
                               className: "w-40",
-                              children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
-                                DropdownMenuItem,
-                                {
-                                  className: "text-red-500 cursor-pointer transition-colors duration-150 focus:text-red-600",
-                                  onClick: () => onDeleteSubTab(tab.id, st.id),
-                                  children: "Delete"
-                                }
-                              )
+                              onCloseAutoFocus: handleMenuCloseAutoFocus,
+                              children: [
+                                /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+                                  DropdownMenuItem,
+                                  {
+                                    onClick: () => {
+                                      pendingRenameRef.current = () => startRenameSubTab(st.id, st.title);
+                                    },
+                                    className: "cursor-pointer transition-colors duration-150",
+                                    children: "Rename"
+                                  }
+                                ),
+                                /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+                                  DropdownMenuItem,
+                                  {
+                                    className: "text-red-500 cursor-pointer transition-colors duration-150 focus:text-red-600",
+                                    onClick: () => onDeleteSubTab(tab.id, st.id),
+                                    children: "Delete"
+                                  }
+                                )
+                              ]
                             }
                           )
                         ] })
@@ -1306,6 +1419,7 @@ function EditorLayout({
     } else {
       editor.commands.clearContent();
     }
+    editor.view.dom.closest(".simple-editor-content")?.scrollTo({ top: 0 });
     lastRestoredRef.current = key;
     isRestoringRef.current = false;
   }, [editor, tabs, activeTabId, activeSubTabId]);
@@ -1318,7 +1432,7 @@ function EditorLayout({
     {
       style: { "--sidebar-width": "220px" },
       className: "h-full w-full overflow-hidden",
-      children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "flex h-screen w-full min-h-0 overflow-hidden", children: [
+      children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "flex h-full w-full min-h-0 overflow-hidden", children: [
         /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
           AppSidebar,
           {
@@ -4478,7 +4592,7 @@ function getFilteredListOptions(availableTypes) {
 }
 function shouldShowListDropdown(params) {
   const { editor, hideWhenUnavailable, listInSchema, canToggleAny } = params;
-  if (!listInSchema || !editor) {
+  if (!listInSchema || !editor || !editor.isEditable) {
     return false;
   }
   if (hideWhenUnavailable && !editor.isActive("code")) {
@@ -6770,44 +6884,6 @@ function useUndoRedo(config) {
 // src/components/tiptap-ui/font-family-dropdown/font-family-dropdown.tsx
 var import_react81 = require("@tiptap/react");
 var import_react82 = require("react");
-
-// src/lib/font.ts
-var FONT_OPTIONS = [
-  { label: "Inter", cssFontFamily: "Inter" },
-  { label: "Roboto", cssFontFamily: "Roboto" },
-  { label: "Open Sans", cssFontFamily: "Opensans" },
-  { label: "Poppins", cssFontFamily: "Poppins" },
-  { label: "Montserrat", cssFontFamily: "Montserrat" },
-  { label: "Lato", cssFontFamily: "Lato" },
-  { label: "Oswald", cssFontFamily: "Oswald" },
-  { label: "Raleway", cssFontFamily: "Raleway" },
-  { label: "Merriweather", cssFontFamily: "Merriweather" },
-  { label: "Playfair Display", cssFontFamily: "Playfair" },
-  { label: "Ubuntu", cssFontFamily: "Ubuntu" },
-  { label: "PT Sans", cssFontFamily: "Ptsans" },
-  { label: "Barlow", cssFontFamily: "Barlow" },
-  { label: "Fira Sans", cssFontFamily: "Fira" },
-  { label: "Nunito", cssFontFamily: "Nunito" },
-  { label: "Cabin", cssFontFamily: "Cabin" },
-  { label: "Bebas Neue", cssFontFamily: "Bebas" },
-  { label: "Source Serif Pro", cssFontFamily: "Sourceserif" },
-  { label: "Libre Baskerville", cssFontFamily: "Librebask" },
-  { label: "Rubik", cssFontFamily: "Rubik" },
-  { label: "Inconsolata", cssFontFamily: "Inconsolata" },
-  { label: "Work Sans", cssFontFamily: "Worksans" },
-  { label: "Mulish", cssFontFamily: "Mulish" },
-  { label: "Quicksand", cssFontFamily: "Quicksand" },
-  { label: "Kanit", cssFontFamily: "Kanit" },
-  { label: "Teko", cssFontFamily: "Teko" },
-  { label: "Josefin Sans", cssFontFamily: "Josefin" },
-  { label: "Philosopher", cssFontFamily: "Philosopher" },
-  { label: "Dancing Script", cssFontFamily: "Dancing" },
-  { label: "Noto Serif", cssFontFamily: "Notoserif" },
-  { label: "Manrope", cssFontFamily: "Manrope" },
-  { label: "Space Grotesk", cssFontFamily: "Spacegrotesk" }
-];
-
-// src/components/tiptap-ui/font-family-dropdown/font-family-dropdown.tsx
 var import_lucide_react8 = require("lucide-react");
 
 // src/components/ui/command.tsx
@@ -6956,8 +7032,10 @@ var import_jsx_runtime72 = require("react/jsx-runtime");
 function FontFamilyDropdown() {
   const { editor } = (0, import_react81.useCurrentEditor)();
   const [open, setOpen] = (0, import_react82.useState)(false);
-  if (!editor) return null;
-  const currentFont = editor.getAttributes("textStyle").fontFamily || "Font Family";
+  if (!editor || !editor.isEditable) return null;
+  const currentFamily = editor.getAttributes("textStyle").fontFamily;
+  const currentOption = findFontOption(currentFamily);
+  const currentLabel = currentOption?.label ?? "Default";
   const applyFont = (family) => {
     if (!editor) return;
     if (editor.state.storedMarks) {
@@ -6978,10 +7056,19 @@ function FontFamilyDropdown() {
       Button,
       {
         variant: "outlineFontFamily",
-        className: "\n            min-w-[90px] h-7 px-2 flex items-center justify-between rounded-sm\n            border-[#a3a3a8] text-[#a3a3a8]\n            hover:border-[#000] hover:text-[#fff] transition-colors\n          ",
+        "aria-label": "Font family",
+        title: currentLabel,
+        className: "\r\n            w-[132px] h-7 px-2 flex items-center justify-between gap-1 rounded-sm\r\n            border-[#a3a3a8] text-[#a3a3a8]\r\n            hover:border-[#000] hover:text-[#fff] transition-colors\r\n          ",
         children: [
-          currentFont,
-          /* @__PURE__ */ (0, import_jsx_runtime72.jsx)(import_lucide_react8.ChevronDown, { className: "w-4 h-4" })
+          /* @__PURE__ */ (0, import_jsx_runtime72.jsx)(
+            "span",
+            {
+              className: "truncate",
+              style: { fontFamily: currentOption?.cssFontFamily },
+              children: currentLabel
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime72.jsx)(import_lucide_react8.ChevronDown, { className: "w-4 h-4 shrink-0" })
         ]
       }
     ) }),
@@ -7027,10 +7114,13 @@ function FontFamilyDropdown() {
               FONT_OPTIONS.map(({ label, cssFontFamily }) => /* @__PURE__ */ (0, import_jsx_runtime72.jsx)(
                 CommandItem,
                 {
+                  value: label,
                   onSelect: () => {
-                    applyFont(label);
+                    applyFont(cssFontFamily);
                     setOpen(false);
                   },
+                  "data-checked": currentOption?.label === label,
+                  className: "data-[checked=true]:bg-accent",
                   style: { fontFamily: cssFontFamily },
                   children: label
                 },
@@ -7204,7 +7294,7 @@ function ColorPicker({ type = "text" }) {
     () => (0, import_lodash.debounce)((v) => setTempHex(v), 50),
     []
   );
-  if (!editor) return null;
+  if (!editor || !editor.isEditable) return null;
   return /* @__PURE__ */ (0, import_jsx_runtime74.jsxs)(Popover2, { open, onOpenChange: (v) => setOpen(v), children: [
     /* @__PURE__ */ (0, import_jsx_runtime74.jsx)(PopoverTrigger2, { asChild: true, children: /* @__PURE__ */ (0, import_jsx_runtime74.jsxs)(
       Button,
@@ -7336,7 +7426,7 @@ var import_jsx_runtime75 = require("react/jsx-runtime");
 function TableDropdownMenu() {
   const { editor } = (0, import_react87.useCurrentEditor)();
   const [open, setOpen] = (0, import_react86.useState)(false);
-  if (!editor) return null;
+  if (!editor || !editor.isEditable) return null;
   const handleAction = (action) => {
     switch (action) {
       case "insert":
@@ -7874,6 +7964,17 @@ function SimpleEditor({ editable = true }) {
         role: "presentation",
         autoFocus: true,
         className: "simple-editor-content",
+        onMouseDown: (event) => {
+          if (!editor || !editable || event.target !== event.currentTarget) return;
+          const rect2 = editor.view.dom.getBoundingClientRect();
+          const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+          const hit = editor.view.posAtCoords({
+            left: clamp(event.clientX, rect2.left + 1, rect2.right - 1),
+            top: clamp(event.clientY, rect2.top + 1, rect2.bottom - 1)
+          });
+          event.preventDefault();
+          editor.chain().focus(hit?.pos ?? "end").run();
+        },
         children: editor && /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(BubbleMenuInline, {})
       }
     )
@@ -7976,6 +8077,7 @@ function loadImageBase64(key) {
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  EDITOR_FONTS_URL,
   Editor,
   EditorBridgeProvider,
   EditorPortalContainerProvider,
@@ -7983,7 +8085,9 @@ function loadImageBase64(key) {
   GRADIENT_ROWS_70,
   cn,
   fileToBase64,
+  findFontOption,
   loadActiveTab,
+  loadEditorFonts,
   loadImageBase64,
   loadTabs,
   saveActiveTab,

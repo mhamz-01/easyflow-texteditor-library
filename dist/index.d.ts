@@ -292,10 +292,30 @@ declare function loadActiveTab(): string;
 declare function saveActiveTab(id: string): void;
 
 type FontOption = {
+    /** Display name, and the exact Google Fonts family name. */
     label: string;
+    /** CSS `font-family` stack applied to text (family + generic fallback). */
     cssFontFamily: string;
 };
 declare const FONT_OPTIONS: FontOption[];
+/**
+ * Single Google Fonts stylesheet covering the default font and every entry
+ * in FONT_OPTIONS.
+ */
+declare const EDITOR_FONTS_URL: string;
+/**
+ * Injects the Google Fonts stylesheet for FONT_OPTIONS into <head>, once.
+ * The library ships no font files, so without this a chosen family only
+ * renders if the consumer happens to load it themselves. Browsers only
+ * download a font file once text actually uses that family.
+ */
+declare function loadEditorFonts(): void;
+/**
+ * Maps a stored `fontFamily` attribute back to its option. Handles both the
+ * current quoted stack (`"Open Sans", sans-serif`) and bare labels saved by
+ * older versions (`Open Sans`).
+ */
+declare function findFontOption(fontFamily?: string | null): FontOption | undefined;
 
 declare function fileToBase64(file: File): Promise<string>;
 declare function saveImageBase64(key: string, base64: string): void;
@@ -303,4 +323,4 @@ declare function loadImageBase64(key: string): string | null;
 
 declare function cn(...inputs: ClassValue[]): string;
 
-export { type CursorVisibilityOptions, Editor, EditorBridgeProvider, type EditorBridgeValue, type EditorChangePayload, type EditorChangeSource, EditorPortalContainerProvider, type EditorSubTab, type EditorTab, type ElementRectOptions, FONT_OPTIONS, type FontOption, GRADIENT_ROWS_70, type RectState, type TabContent, type WindowSizeState, cn, fileToBase64, loadActiveTab, loadImageBase64, loadTabs, saveActiveTab, saveImageBase64, saveTabs, useBodyRect, useComposedRef, useCursorVisibility, useEditorBridge, useEditorPortalContainer, useElementRect, useIsBreakpoint, useIsMobile, useMenuNavigation, useRefRect, useScrolling, useThrottledCallback, useTiptapEditor, useUnmount, useWindowSize };
+export { type CursorVisibilityOptions, EDITOR_FONTS_URL, Editor, EditorBridgeProvider, type EditorBridgeValue, type EditorChangePayload, type EditorChangeSource, EditorPortalContainerProvider, type EditorSubTab, type EditorTab, type ElementRectOptions, FONT_OPTIONS, type FontOption, GRADIENT_ROWS_70, type RectState, type TabContent, type WindowSizeState, cn, fileToBase64, findFontOption, loadActiveTab, loadEditorFonts, loadImageBase64, loadTabs, saveActiveTab, saveImageBase64, saveTabs, useBodyRect, useComposedRef, useCursorVisibility, useEditorBridge, useEditorPortalContainer, useElementRect, useIsBreakpoint, useIsMobile, useMenuNavigation, useRefRect, useScrolling, useThrottledCallback, useTiptapEditor, useUnmount, useWindowSize };
